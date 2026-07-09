@@ -72,6 +72,29 @@
   }
   .launch-tile:active{ transform:scale(.96); }
   .launch-tile:hover{ border-color:var(--gold); }
+
+  /* ---------- Status row (EUR / pogoda / countdown) ---------- */
+  .status-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0 20px; }
+  .status-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 10px;
+    display:flex; flex-direction:column; gap:3px; align-items:flex-start;
+  }
+  .status-card .sc-label{ font-family:var(--font-mono); font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
+  .status-card .sc-value{ font-size:16px; font-weight:700; color:var(--text); }
+  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); }
+
+  /* ---------- Priorytet dnia ---------- */
+  .priority-box{
+    background:linear-gradient(135deg, rgba(201,168,118,0.10), rgba(107,156,137,0.06));
+    border:1px solid var(--gold); border-radius:14px; padding:16px; margin-bottom:20px;
+  }
+  .priority-box .pb-label{ font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+  .priority-box textarea{
+    width:100%; background:transparent; border:none; color:var(--text); font-family:var(--font-sans); font-size:16px;
+    font-weight:600; outline:none; resize:none; min-height:30px; line-height:1.4; padding:0;
+  }
+  .priority-box textarea::placeholder{ color:var(--text-muted); font-weight:400; }
+
   .launch-tile .glyph{
     width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
     font-size:20px;
@@ -176,6 +199,29 @@
     </a>
   </div>
 
+  <div class="status-row">
+    <div class="status-card">
+      <span class="sc-label">EUR/PLN</span>
+      <span class="sc-value" id="eurValue">—</span>
+      <span class="sc-sub" id="eurDate">ładowanie…</span>
+    </div>
+    <div class="status-card">
+      <span class="sc-label">Katowice</span>
+      <span class="sc-value" id="weatherValue">—</span>
+      <span class="sc-sub" id="weatherSub">ładowanie…</span>
+    </div>
+    <div class="status-card">
+      <span class="sc-label">Mlekomat #1</span>
+      <span class="sc-value" id="countdownValue">—</span>
+      <span class="sc-sub">do startu</span>
+    </div>
+  </div>
+
+  <div class="priority-box">
+    <div class="pb-label">◆ Priorytet dnia</div>
+    <textarea id="priorityInput" placeholder="Jedna najważniejsza rzecz na dziś…" rows="1" oninput="autoResize(this)"></textarea>
+  </div>
+
   <div class="tabs">
     <div class="tab active" data-tab="links">Linki</div>
     <div class="tab" data-tab="notes">Schowek</div>
@@ -203,13 +249,14 @@
 const CONFIG = {
   PIN: "5855",                 // <-- ustaw własny PIN
   JSONBIN_BIN_ID: "6a4ffef3f5f4af5e29794a3e",     // <-- z jsonbin.io
-  JSONBIN_API_KEY: "hz0FdV23nPQpt.X1kAhHu06YcG" // <-- X-Master-Key z jsonbin.io
+  JSONBIN_API_KEY: "TWOJ_MASTER_KEY" // <-- X-Master-Key z jsonbin.io
 };
 
 const JSONBIN_BASE = `https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN_ID}`;
 
-let DATA = { links: [], notes: [] };
+let DATA = { links: [], notes: [], priority: { text:"", date:"" } };
 let saveTimer = null;
+let priorityTimer = null;
 
 /* ---------- Gate ---------- */
 function tryUnlock(){
@@ -239,6 +286,76 @@ function boot(){
   setInterval(tickClock, 1000);
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>switchTab(t.dataset.tab)));
   loadData();
+  loadEurRate();
+  loadWeather();
+  renderCountdown();
+  document.getElementById('priorityInput').addEventListener('input', e=>{
+    clearTimeout(priorityTimer);
+    priorityTimer = setTimeout(()=>savePriority(e.target.value), 500);
+  });
+}
+
+/* ---------- EUR/PLN (NBP API) ---------- */
+async function loadEurRate(){
+  try{
+    const res = await fetch('https://api.nbp.pl/api/exchangerates/rates/a/eur/?format=json');
+    const json = await res.json();
+    const rate = json.rates[0].mid;
+    document.getElementById('eurValue').textContent = rate.toFixed(4) + ' zł';
+    document.getElementById('eurDate').textContent = 'kurs NBP ' + json.rates[0].effectiveDate;
+  }catch(e){
+    document.getElementById('eurValue').textContent = '—';
+    document.getElementById('eurDate').textContent = 'brak danych';
+  }
+}
+
+/* ---------- Pogoda Katowice (Open-Meteo) ---------- */
+const WMO_LABELS = {
+  0:'Bezchmurnie', 1:'Prawie bezchmurnie', 2:'Częściowo pochmurno', 3:'Pochmurno',
+  45:'Mgła', 48:'Mgła szronowa', 51:'Mżawka', 53:'Mżawka', 55:'Mżawka',
+  61:'Deszcz', 63:'Deszcz', 65:'Silny deszcz', 71:'Śnieg', 73:'Śnieg', 75:'Silny śnieg',
+  80:'Przelotny deszcz', 81:'Przelotny deszcz', 82:'Ulewa', 95:'Burza', 96:'Burza z gradem'
+};
+async function loadWeather(){
+  try{
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.2649&longitude=19.0238&current=temperature_2m,weather_code&timezone=Europe/Warsaw');
+    const json = await res.json();
+    const temp = Math.round(json.current.temperature_2m);
+    const label = WMO_LABELS[json.current.weather_code] || 'Zmiennie';
+    document.getElementById('weatherValue').textContent = temp + '°C';
+    document.getElementById('weatherSub').textContent = label;
+  }catch(e){
+    document.getElementById('weatherValue').textContent = '—';
+    document.getElementById('weatherSub').textContent = 'brak danych';
+  }
+}
+
+/* ---------- Countdown do pierwszego mlekomatu ---------- */
+function renderCountdown(){
+  const target = new Date('2026-08-01T00:00:00');
+  const now = new Date();
+  const diffDays = Math.ceil((target - now) / 86400000);
+  document.getElementById('countdownValue').textContent = diffDays > 0 ? diffDays + ' dni' : 'start!';
+}
+
+/* ---------- Priorytet dnia ---------- */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function loadPriority(){
+  const input = document.getElementById('priorityInput');
+  if(DATA.priority && DATA.priority.date === todayStr()){
+    input.value = DATA.priority.text || '';
+  } else {
+    input.value = '';
+  }
+  autoResize(input);
+}
+function savePriority(text){
+  DATA.priority = { text, date: todayStr() };
+  queueSave();
+}
+function autoResize(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 function setGreeting(){
@@ -262,7 +379,8 @@ async function loadData(){
     const res = await fetch(`${JSONBIN_BASE}/latest`, { headers:{ 'X-Master-Key': CONFIG.JSONBIN_API_KEY }});
     if(!res.ok) throw new Error('fetch failed');
     const json = await res.json();
-    DATA = json.record && (json.record.links || json.record.notes) ? json.record : DATA;
+    DATA = json.record && (json.record.links || json.record.notes || json.record.priority) ? json.record : DATA;
+    if(!DATA.priority) DATA.priority = { text:"", date:"" };
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -296,7 +414,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderLinks(); renderNotes(); }
+function renderAll(){ renderLinks(); renderNotes(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
