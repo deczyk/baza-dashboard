@@ -1,0 +1,20 @@
+/* Ukryj wszystkie tagi (np. #nawyk) wizualnie w całym vaultcie.
+   Dane w plikach się NIE zmieniają — Tasks/Dataview nadal je widzą i filtrują.
+   Ukryta jest tylko "pigułka" tagu na ekranie. */
+
+/* Widok odczytu (Reading view) */
+a.tag {
+  display: none !important;
+}
+
+/* Live Preview i tryb edycji źródła */
+.cm-hashtag,
+.cm-hashtag-begin,
+.cm-hashtag-end {
+  display: none !important;
+}
+
+/* Panel boczny z chmurą tagów (jeśli używasz) */
+.tag-pane-tag {
+  display: none !important;
+}
