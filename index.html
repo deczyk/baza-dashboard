@@ -81,7 +81,7 @@
   }
   .status-card .sc-label{ font-family:var(--font-mono); font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
   .status-card .sc-value{ font-size:16px; font-weight:700; color:var(--text); }
-  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); }
+  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); line-height:1.4; white-space:normal; }
 
   /* ---------- Priorytet dnia ---------- */
   .priority-box{
@@ -192,10 +192,10 @@
       <div class="lbl">Panel</div>
       <div class="sub">CRM</div>
     </a>
-    <a class="launch-tile tile-tasks" href="https://app.super-productivity.com/" target="_blank" rel="noopener">
+    <a class="launch-tile tile-tasks" href="https://ticktick.com/signin" target="_blank" rel="noopener">
       <div class="glyph">✅</div>
       <div class="lbl">Taski</div>
-      <div class="sub">Super Productivity</div>
+      <div class="sub">TickTick</div>
     </a>
   </div>
 
@@ -205,10 +205,11 @@
       <span class="sc-value" id="eurValue">—</span>
       <span class="sc-sub" id="eurDate">ładowanie…</span>
     </div>
-    <div class="status-card">
-      <span class="sc-label">Katowice</span>
+    <div class="status-card" style="grid-column:span 1">
+      <span class="sc-label">Tarnowskie Góry</span>
       <span class="sc-value" id="weatherValue">—</span>
       <span class="sc-sub" id="weatherSub">ładowanie…</span>
+      <span class="sc-sub" id="weatherExtra"></span>
     </div>
     <div class="status-card">
       <span class="sc-label">Mlekomat #1</span>
@@ -244,15 +245,16 @@
 
 <script>
 /* =========================================================
-   KONFIGURACJA — uzupełnij przed wdrożeniem
+   KONFIGURACJA
+   Klucz jsonbin.io NIE jest już tutaj — leży bezpiecznie jako
+   zmienna środowiskowa na Vercel (JSONBIN_BIN_ID, JSONBIN_API_KEY),
+   używana przez /api/baza-data.js po stronie serwera.
    ========================================================= */
 const CONFIG = {
-  PIN: "5855",                 // <-- ustaw własny PIN
-  JSONBIN_BIN_ID: "6a4ffef3f5f4af5e29794a3e",     // <-- z jsonbin.io
-  JSONBIN_API_KEY: "TWOJ_MASTER_KEY" // <-- X-Master-Key z jsonbin.io
+  PIN: "5855"
 };
 
-const JSONBIN_BASE = `https://api.jsonbin.io/v3/b/${CONFIG.JSONBIN_BIN_ID}`;
+const API = '/api/baza-data';
 
 let DATA = { links: [], notes: [], priority: { text:"", date:"" } };
 let saveTimer = null;
@@ -318,12 +320,19 @@ const WMO_LABELS = {
 };
 async function loadWeather(){
   try{
-    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.2649&longitude=19.0238&current=temperature_2m,weather_code&timezone=Europe/Warsaw');
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4468&longitude=18.8628&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&timezone=Europe/Warsaw');
     const json = await res.json();
-    const temp = Math.round(json.current.temperature_2m);
-    const label = WMO_LABELS[json.current.weather_code] || 'Zmiennie';
+    const c = json.current;
+    const temp = Math.round(c.temperature_2m);
+    const feels = Math.round(c.apparent_temperature);
+    const label = WMO_LABELS[c.weather_code] || 'Zmiennie';
     document.getElementById('weatherValue').textContent = temp + '°C';
-    document.getElementById('weatherSub').textContent = label;
+    document.getElementById('weatherSub').textContent = label + ' · odczuwalna ' + feels + '°C';
+    const extraBits = [];
+    extraBits.push('💨 ' + Math.round(c.wind_speed_10m) + ' km/h');
+    extraBits.push('💧 ' + Math.round(c.relative_humidity_2m) + '%');
+    if(c.precipitation > 0) extraBits.push('🌧 ' + c.precipitation.toFixed(1) + 'mm');
+    document.getElementById('weatherExtra').textContent = extraBits.join('  ·  ');
   }catch(e){
     document.getElementById('weatherValue').textContent = '—';
     document.getElementById('weatherSub').textContent = 'brak danych';
@@ -373,10 +382,10 @@ function switchTab(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+name));
 }
 
-/* ---------- Sync (jsonbin.io) ---------- */
+/* ---------- Sync (przez /api/baza-data, klucz chowa Vercel) ---------- */
 async function loadData(){
   try{
-    const res = await fetch(`${JSONBIN_BASE}/latest`, { headers:{ 'X-Master-Key': CONFIG.JSONBIN_API_KEY }});
+    const res = await fetch(API);
     if(!res.ok) throw new Error('fetch failed');
     const json = await res.json();
     DATA = json.record && (json.record.links || json.record.notes || json.record.priority) ? json.record : DATA;
@@ -396,9 +405,9 @@ function queueSave(){
 
 async function saveData(){
   try{
-    const res = await fetch(JSONBIN_BASE, {
+    const res = await fetch(API, {
       method:'PUT',
-      headers:{ 'Content-Type':'application/json', 'X-Master-Key': CONFIG.JSONBIN_API_KEY },
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify(DATA)
     });
     if(!res.ok) throw new Error('save failed');
