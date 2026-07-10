@@ -619,6 +619,7 @@ async function loadActivityWatch(){
     const buckets = await bucketsRes.json();
     const windowBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-window'));
     const afkBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-afk'));
+    const webBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-web'));
 
     if(!windowBucketId || !afkBucketId){
       box.innerHTML = '<div class="empty" style="padding:6px 0">ActivityWatch nie znaleziony na tym urządzeniu</div>';
@@ -641,13 +642,33 @@ async function loadActivityWatch(){
     });
     const topApps = Object.entries(appTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-    const h = Math.floor(activeSeconds/3600), m = Math.floor((activeSeconds%3600)/60);
-    let html = `<div class="aw-total">${h}h ${m}min</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">aktywności dziś</div>`;
-    html += topApps.map(([app,sec]) => {
-      const ah = Math.floor(sec/3600), am = Math.floor((sec%3600)/60);
-      const timeStr = ah > 0 ? `${ah}h ${am}m` : `${am}m`;
-      return `<div class="aw-app-row"><span>${escapeHtml(app)}</span><span class="aw-time">${timeStr}</span></div>`;
-    }).join('');
+    let topSites = [];
+    if(webBucketId){
+      const webRes = await fetch(`${AW}/api/0/buckets/${webBucketId}/events?${params}&limit=-1`);
+      const webEvents = await webRes.json();
+      const siteTotals = {};
+      webEvents.forEach(e => {
+        let domain = 'nieznana strona';
+        try{ domain = new URL(e.data.url).hostname.replace('www.',''); }catch(err){}
+        siteTotals[domain] = (siteTotals[domain] || 0) + e.duration;
+      });
+      topSites = Object.entries(siteTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    }
+
+    const fmtTime = sec => {
+      const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+
+    let html = `<div class="aw-total">${fmtTime(activeSeconds)}</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">aktywności dziś</div>`;
+    html += `<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Top aplikacje</div>`;
+    html += topApps.map(([app,sec]) => `<div class="aw-app-row"><span>${escapeHtml(app)}</span><span class="aw-time">${fmtTime(sec)}</span></div>`).join('');
+
+    if(topSites.length > 0){
+      html += `<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px">Top strony</div>`;
+      html += topSites.map(([site,sec]) => `<div class="aw-app-row"><span>${escapeHtml(site)}</span><span class="aw-time">${fmtTime(sec)}</span></div>`).join('');
+    }
+
     box.innerHTML = html;
   }catch(e){
     box.innerHTML = '<div class="empty" style="padding:6px 0">Niedostępne na tym urządzeniu</div>';
