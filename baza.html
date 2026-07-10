@@ -499,13 +499,22 @@ const HABITS = [
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
-  { id:'h14', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html' },
+  { id:'h14', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6] },
+  { id:'h15', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)' },
+  { id:'h16', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
+  { id:'h17', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
+  { id:'h18', period:'Wieczór', text:'15-20 min czytania / nauki' },
   { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
   { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
   { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
   { id:'h13', period:'Wieczór', text:'5 min ciszy + krótki przegląd dnia (3 zdania)' },
 ];
 const PERIODS = ['Rano', 'Dzień', 'Wieczór'];
+
+function getTodayHabits(){
+  const dow = new Date().getDay(); // 0=Nd,1=Pon,...6=Sob
+  return HABITS.filter(h => !h.days || h.days.includes(dow));
+}
 
 function renderHeatmap(){
   const grid = document.getElementById('heatmapGrid');
@@ -522,8 +531,8 @@ function renderHeatmap(){
 
     let record = DATA.habitHistory ? DATA.habitHistory[key] : null;
     if(key === todayStr()){
-      const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
-      record = { done: doneCount, total: HABITS.length };
+      const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+      record = { done: doneCount, total: getTodayHabits().length };
     }
     if(record && record.total > 0){
       const pct = record.done / record.total;
@@ -541,8 +550,8 @@ function renderHeatmap(){
   if(!DATA.habits) DATA.habits = { date:"", done:{} };
   if(!DATA.habitHistory) DATA.habitHistory = {};
   if(DATA.habits.date && DATA.habits.date !== todayStr()){
-    const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
-    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: HABITS.length };
+    const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: getTodayHabits().length };
   }
   if(DATA.habits.date !== todayStr()){
     DATA.habits = { date: todayStr(), done: {} };
@@ -610,19 +619,19 @@ function toggleHabit(id){
       document.getElementById('gamiLevel').classList.add('level-up');
       setTimeout(()=>document.getElementById('gamiLevel').classList.remove('level-up'), 700);
     }
-    const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
-    if(doneCount === HABITS.length){
+    const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+    if(doneCount === getTodayHabits().length){
       fireConfetti();
     }
   }
 }
 
 function checkStreak(){
-  const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+  const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
   const today = todayStr();
   if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
 
-  if(doneCount === HABITS.length){
+  if(doneCount === getTodayHabits().length){
     if(DATA.streak.lastCompleteDate !== today){
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
       DATA.streak.count = (DATA.streak.lastCompleteDate === yesterday) ? DATA.streak.count + 1 : 1;
@@ -685,12 +694,12 @@ function renderHabits(){
   const progressEl = document.getElementById('habitsProgress');
   list.innerHTML = '';
 
-  const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
-  const pct = Math.round((doneCount / HABITS.length) * 100);
-  progressEl.innerHTML = `<span>${doneCount}/${HABITS.length}</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span>`;
+  const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+  const pct = Math.round((doneCount / getTodayHabits().length) * 100);
+  progressEl.innerHTML = `<span>${doneCount}/${getTodayHabits().length}</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span>`;
 
   PERIODS.forEach(period => {
-    const items = HABITS.filter(h => h.period === period);
+    const items = getTodayHabits().filter(h => h.period === period);
     const label = document.createElement('div');
     label.className = 'habit-group-label';
     label.textContent = '◆ ' + period;
