@@ -225,13 +225,14 @@
 
 <script>
 const API = '/api/baza-data';
+const API_PASSWORD = '5855';
 let DATA = {};
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 async function loadData(){
   try{
-    const res = await fetch(API);
+    const res = await fetch(API, { headers:{ 'X-Panel-Password': API_PASSWORD }});
     const json = await res.json();
     DATA = json.record || {};
   }catch(e){ DATA = {}; }
@@ -277,7 +278,7 @@ async function saveData(){
   try{
     await fetch(API, {
       method:'PUT',
-      headers:{ 'Content-Type':'application/json' },
+      headers:{ 'Content-Type':'application/json', 'X-Panel-Password': API_PASSWORD },
       body: JSON.stringify(DATA)
     });
   }catch(e){}
