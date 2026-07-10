@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trening — masa ciała</title>
+<style>
+  :root{
+    --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
+    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:700px; margin:0 auto; padding:32px 20px 80px; }
+  .eyebrow{ font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
+  h1{ font-size:26px; margin:0 0 20px; }
+  .intro{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:24px; font-size:14px; line-height:1.65; }
+  .intro b{ color:var(--gold); }
+  .intro ul{ margin:10px 0 0; padding-left:20px; }
+  .intro li{ margin-bottom:6px; }
+  .warn{ background:rgba(180,102,79,0.12); border:1px solid var(--danger); border-radius:12px; padding:14px 16px; margin-bottom:24px; font-size:13.5px; line-height:1.5; }
+
+  .week-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:28px; }
+  .day-pill{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 4px; text-align:center; }
+  .day-pill.rest{ opacity:.5; }
+  .day-pill .dname{ font-family:var(--font-mono); font-size:9px; color:var(--text-muted); text-transform:uppercase; }
+  .day-pill .dtype{ font-size:11.5px; font-weight:700; margin-top:4px; color:var(--gold); }
+  .day-pill.rest .dtype{ color:var(--text-muted); }
+
+  h2{ font-size:13px; font-family:var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--gold); margin:32px 0 4px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  h2:first-of-type{ margin-top:0; }
+
+  .ex-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  .ex-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:6px; }
+  .ex-name{ font-weight:700; font-size:14.5px; }
+  .ex-sets{ font-family:var(--font-mono); font-size:11.5px; color:var(--sage); white-space:nowrap; }
+  .ex-desc{ font-size:13px; color:var(--text-muted); line-height:1.5; }
+  .ex-prog{ font-size:11.5px; color:var(--gold); margin-top:6px; }
+
+  .principle{ display:flex; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  .principle .pnum{ font-family:var(--font-mono); color:var(--gold); font-weight:700; flex-shrink:0; }
+  .principle p{ margin:0; font-size:13.5px; line-height:1.55; color:var(--text); }
+  .principle b{ color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">◆ Trening</div>
+  <h1>Kalistenika — budowa masy mięśniowej</h1>
+
+  <div class="intro">
+    Plan bez sprzętu, 4-5 dni/tydzień, rotacja <b>Push / Pull / Nogi</b>. Poziom: średniozaawansowany po przerwie.
+    <ul>
+      <li>Rozgrzewka 5 min przed każdym treningiem (lekki ruch, krążenia stawów)</li>
+      <li>Odpoczynek między seriami: 60-90 sek.</li>
+      <li>Tempo: 2 sek. w dół, 1 sek. w górę — nie machaj bezwładnie</li>
+    </ul>
+  </div>
+
+  <div class="warn">
+    <b>Bez diety to nie zadziała.</b> Nadwyżka kaloryczna ~300-500 kcal ponad zapotrzebowanie + 1,6-2,2 g białka na kg masy ciała dziennie. Trening daje bodziec, dieta daje budulec — oba muszą być na miejscu.
+  </div>
+
+  <div class="week-grid">
+    <div class="day-pill"><div class="dname">Pon</div><div class="dtype">Push</div></div>
+    <div class="day-pill"><div class="dname">Wt</div><div class="dtype">Pull</div></div>
+    <div class="day-pill"><div class="dname">Śr</div><div class="dtype">Nogi</div></div>
+    <div class="day-pill rest"><div class="dname">Czw</div><div class="dtype">Rdzeń</div></div>
+    <div class="day-pill"><div class="dname">Pt</div><div class="dtype">Push</div></div>
+    <div class="day-pill"><div class="dname">Sob</div><div class="dtype">Pull</div></div>
+    <div class="day-pill rest"><div class="dname">Nd</div><div class="dtype">Odpoczynek</div></div>
+  </div>
+
+  <h2>Push — klatka / barki / triceps</h2>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Pompki klasyczne</span><span class="ex-sets">4 × 8-15</span></div>
+    <div class="ex-desc">Dłonie na szerokość barków, ciało w jednej linii od głowy po pięty, łokcie ~45° od tułowia (nie na boki).</div>
+    <div class="ex-prog">Progresja: więcej powtórzeń → wolniejsze tempo → stopy na podwyższeniu</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Pompki diamentowe</span><span class="ex-sets">3 × 8-12</span></div>
+    <div class="ex-desc">Dłonie razem pod klatką, kciuki i palce wskazujące tworzą trójkąt. Mocno angażuje triceps.</div>
+    <div class="ex-prog">Progresja: kolana → pełne → stopy wyżej</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Pompki pike</span><span class="ex-sets">3 × 8-12</span></div>
+    <div class="ex-desc">Pozycja odwróconego V (jak psa głową w dół), dłonie i stopy blisko siebie, zginasz łokcie kierując głowę w stronę podłogi. Buduje barki.</div>
+    <div class="ex-prog">Progresja: stopy na podwyższeniu = bliżej pionu = trudniej</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Dipy na krześle/stole</span><span class="ex-sets">3 × 10-15</span></div>
+    <div class="ex-desc">Dłonie na krawędzi krzesła za sobą, nogi wyprostowane przed sobą, opuszczasz biodra zginając łokcie do ~90°.</div>
+    <div class="ex-prog">Progresja: nogi ugięte → nogi proste → stopy na podwyższeniu</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Plank-to-pushup</span><span class="ex-sets">3 × 10</span></div>
+    <div class="ex-desc">Z podporu na przedramionach przechodzisz do podporu na dłoniach i z powrotem, na przemian. Angażuje cały korpus + triceps.</div>
+  </div>
+
+  <h2>Pull — plecy / biceps</h2>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Wiosłowanie pod stołem</span><span class="ex-sets">4 × 8-15</span></div>
+    <div class="ex-desc">Leżysz pod solidnym stołem/blatem, chwytasz krawędź nachwytem, ciągniesz klatkę do blatu, ciało proste jak deska.</div>
+    <div class="ex-prog">Progresja: nogi ugięte (łatwiej) → nogi proste (trudniej)</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Superman</span><span class="ex-sets">3 × 12-15</span></div>
+    <div class="ex-desc">Leżysz na brzuchu, jednocześnie unosisz ręce, klatkę i nogi, trzymasz 2 sek. na górze. Dolna część pleców.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Doorway row (jeśli masz uchwyt w futrynie)</span><span class="ex-sets">4 × 10-15</span></div>
+    <div class="ex-desc">Trzymasz się futryny/framugi, odchylasz ciało do tyłu pod kątem, ciągniesz się do framugi.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Retraction barków (bez obciążenia)</span><span class="ex-sets">3 × 15</span></div>
+    <div class="ex-desc">Stojąc, ściągasz łopatki do siebie i w dół, trzymasz 2 sek. Aktywacja mięśni między łopatkami.</div>
+  </div>
+
+  <h2>Nogi</h2>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Przysiady</span><span class="ex-sets">4 × 15-20</span></div>
+    <div class="ex-desc">Stopy na szerokość barków, biodra cofasz jak siadając na krzesło, kolana w linii ze stopami, uda równolegle do podłogi.</div>
+    <div class="ex-prog">Progresja: wolniejsze tempo → przysiad bułgarski → pistol squat</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Przysiad bułgarski</span><span class="ex-sets">3 × 10-12 / noga</span></div>
+    <div class="ex-desc">Tylna stopa na krześle za Tobą, przednia noga robi całą pracę schodząc w głęboki wykrok.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Pistol squat (progresja)</span><span class="ex-sets">3 × 5-8 / noga</span></div>
+    <div class="ex-desc">Przysiad na jednej nodze, druga wyciągnięta przed sobą. Na start trzymaj się krzesła/framugi dla balansu.</div>
+    <div class="ex-prog">Progresja: z asekuracją → bez trzymania → z odważnikiem</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Wykroki chodzone</span><span class="ex-sets">3 × 12 / noga</span></div>
+    <div class="ex-desc">Długi krok do przodu, opuszczasz biodra aż tylne kolano prawie dotknie podłogi, wstajesz i robisz kolejny krok.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Wspięcia na palce</span><span class="ex-sets">4 × 20-25</span></div>
+    <div class="ex-desc">Stojąc (najlepiej na krawędzi schodka dla pełnego zakresu), unosisz się na palcach, trzymasz sekundę na górze.</div>
+  </div>
+
+  <h2>Rdzeń (czwartek)</h2>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Plank</span><span class="ex-sets">3 × 30-60 sek.</span></div>
+    <div class="ex-desc">Podpór na przedramionach, ciało w jednej linii, nie zapadaj się w biodrach ani nie unoś ich za wysoko.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Boczny plank</span><span class="ex-sets">3 × 20-40 sek. / stronę</span></div>
+    <div class="ex-desc">Podpór na jednym przedramieniu, ciało bokiem, biodra uniesione w linii prostej.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Nożyce</span><span class="ex-sets">3 × 20</span></div>
+    <div class="ex-desc">Leżysz na plecach, dolna część pleców przyklejona do podłogi, na przemian unosisz wyprostowane nogi.</div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-top"><span class="ex-name">Mountain climbers</span><span class="ex-sets">3 × 30 sek.</span></div>
+    <div class="ex-desc">Z pozycji podporu na dłoniach naprzemiennie podciągasz kolana do klatki w szybkim tempie.</div>
+  </div>
+
+  <h2>Zasady progresji</h2>
+
+  <div class="principle">
+    <span class="pnum">1</span>
+    <p><b>Więcej powtórzeń</b> — jak górna granica zakresu (np. 15) robi się łatwa, przechodzisz do trudniejszego wariantu ćwiczenia.</p>
+  </div>
+  <div class="principle">
+    <span class="pnum">2</span>
+    <p><b>Trudniejszy wariant</b> — każde ćwiczenie ma progresję (opisaną przy ćwiczeniu) — to Twój odpowiednik "dokładania ciężaru".</p>
+  </div>
+  <div class="principle">
+    <span class="pnum">3</span>
+    <p><b>Wolniejsze tempo</b> — 3-4 sek. fazy opuszczania zamiast 2 — więcej czasu pod napięciem = większy bodziec.</p>
+  </div>
+  <div class="principle">
+    <span class="pnum">4</span>
+    <p><b>Krótszy odpoczynek</b> — z 90 sek. schodzisz do 60 sek. między seriami, gdy forma i tak zostaje dobra.</p>
+  </div>
+
+</div>
+</body>
+</html>
