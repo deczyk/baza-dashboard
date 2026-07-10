@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poradnik — jak robić nawyki</title>
+<style>
+  :root{
+    --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
+    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:700px; margin:0 auto; padding:32px 20px 80px; }
+  .eyebrow{ font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
+  h1{ font-size:26px; margin:0 0 24px; }
+
+  .toc{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:28px; }
+  .toc-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
+  .toc a{ display:block; color:var(--sage); text-decoration:none; font-size:13.5px; padding:4px 0; }
+  .toc a:hover{ text-decoration:underline; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:20px; scroll-margin-top:20px; }
+  .card h2{ margin:0 0 10px; color:var(--gold); font-size:17px; }
+  .card p{ font-size:13.5px; line-height:1.65; color:var(--text); margin:0 0 10px; }
+  .card p:last-child{ margin-bottom:0; }
+  .card .why{ font-size:12.5px; color:var(--text-muted); border-top:1px solid var(--line); padding-top:10px; margin-top:12px; }
+  .card .why b{ color:var(--sage); }
+  .steps{ margin:8px 0; padding-left:20px; }
+  .steps li{ font-size:13.5px; line-height:1.6; margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">◆ Poradnik</div>
+  <h1>Jak robić nawyki, które brzmią niejasno</h1>
+
+  <div class="toc">
+    <div class="toc-label">Spis treści</div>
+    <a href="#izometria">Izometria dłoni na ścianie</a>
+    <a href="#20-20-20">Zasada 20-20-20</a>
+    <a href="#przysiady-pompki">10 przysiadów / pompek przy ścianie</a>
+    <a href="#plank">Plank (w mini-serii ruchu)</a>
+    <a href="#postawa">Sprawdzenie postawy</a>
+    <a href="#oddech">Głęboki oddech / minuta ciszy</a>
+  </div>
+
+  <div class="card" id="izometria">
+    <h2>Izometria dłoni na ścianie</h2>
+    <ol class="steps">
+      <li>Stań bokiem do ściany, ramię wyciągnięte.</li>
+      <li>Oprzyj całą dłoń płasko o ścianę, na wysokości barku.</li>
+      <li>Pchaj ścianę najmocniej jak potrafisz — jakbyś próbował ją przesunąć.</li>
+      <li>Trzymaj napięcie przez 60 sekund, oddychaj normalnie.</li>
+      <li>Powtórz drugą ręką.</li>
+    </ol>
+    <div class="why"><b>Po co:</b> to ćwiczenie izometryczne — mięsień napina się maksymalnie, ale bez ruchu. Buduje siłę bez żadnego ryzyka kontuzji stawów, bo nie ma obciążenia dynamicznego.</div>
+  </div>
+
+  <div class="card" id="20-20-20">
+    <h2>Zasada 20-20-20</h2>
+    <p>Co 20 minut pracy przy ekranie: spójrz przez 20 sekund na coś oddalonego o ok. 20 stóp (6 metrów) — np. przez okno, na koniec pokoju.</p>
+    <div class="why"><b>Po co:</b> oczy patrzące długo z bliska (ekran, telefon) się męczą — mięsień odpowiedzialny za ostrość ciągle pracuje. Spojrzenie w dal daje mu chwilę odpoczynku, zmniejsza zmęczenie wzroku przy pracy siedzącej.</div>
+  </div>
+
+  <div class="card" id="przysiady-pompki">
+    <h2>10 przysiadów / pompek przy ścianie</h2>
+    <p><b>Przysiady:</b> stopy na szerokość barków, biodra cofasz jak siadając na krzesło, kolana w linii ze stopami, wracasz do stania. 10 powtórzeń.</p>
+    <p><b>Pompki przy ścianie</b> (łatwiejsza wersja zwykłych pompek): stań przed ścianą w odległości ramienia, dłonie na ścianie na szerokość barków, zginaj łokcie przybliżając klatkę do ściany, wróć. 10 powtórzeń.</p>
+    <div class="why"><b>Po co:</b> krótki zastrzyk ruchu rano — podnosi tętno, budzi ciało, nie wymaga siłowni ani sprzętu.</div>
+  </div>
+
+  <div class="card" id="plank">
+    <h2>Plank</h2>
+    <ol class="steps">
+      <li>Podpór na przedramionach i palcach stóp, łokcie pod barkami.</li>
+      <li>Ciało w jednej linii od głowy po pięty — nie zapadaj się w biodrach, nie unoś ich za wysoko.</li>
+      <li>Napnij brzuch, oddychaj spokojnie.</li>
+      <li>Trzymaj 20-30 sekund na start.</li>
+    </ol>
+    <div class="why"><b>Po co:</b> jedno z najlepszych ćwiczeń na siłę całego korpusu (core) — stabilizuje kręgosłup, poprawia postawę.</div>
+  </div>
+
+  <div class="card" id="postawa">
+    <h2>Sprawdzenie postawy</h2>
+    <p>Kilka razy dziennie, przy komputerze albo w trakcie dnia: barki ściągnij lekko w dół i do tyłu (nie w górę), broda lekko wciągnięta, nie wysunięta do przodu, szyja rozluźniona.</p>
+    <div class="why"><b>Po co:</b> to nie jest jednorazowe ćwiczenie, tylko przypomnienie — mózg z czasem zaczyna to robić automatycznie, mniej garbienia się przy pracy siedzącej.</div>
+  </div>
+
+  <div class="card" id="oddech">
+    <h2>Głęboki oddech / minuta ciszy</h2>
+    <p>Usiądź wygodnie, zamknij oczy jeśli chcesz. Wdech przez nos licząc do 4, wydech przez usta licząc do 8 (wydech dwa razy dłuższy niż wdech). Kilka takich cykli albo po prostu minuta w ciszy, bez telefonu.</p>
+    <div class="why"><b>Po co:</b> wydłużony wydech aktywuje układ przywspółczulny (odpowiedzialny za odpoczynek/regenerację) — realnie obniża tętno i poziom napięcia w kilkadziesiąt sekund.</div>
+  </div>
+
+</div>
+</body>
+</html>
