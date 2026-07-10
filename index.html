@@ -1003,7 +1003,7 @@ function renderHabits(){
       row.className = 'habit-row' + (done ? ' done' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
       row.onclick = () => toggleHabit(h.id);
       const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
-      const timeBadge = h.time ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--sage);margin-left:auto;padding-left:10px;white-space:nowrap">${h.time}</span>` : '';
+      const timeBadge = h.time ? `<span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--gold);background:rgba(201,168,118,0.14);border:1px solid rgba(201,168,118,0.35);border-radius:8px;padding:3px 9px;margin-left:auto;white-space:nowrap">${h.time}</span>` : '';
       row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>${timeBadge}`;
       list.appendChild(row);
     });
