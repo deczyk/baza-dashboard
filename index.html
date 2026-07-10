@@ -313,15 +313,15 @@
       <div class="lbl">Claude</div>
       <div class="sub">Chat / appka</div>
     </a>
-    <a class="launch-tile" href="https://web.whatsapp.com" target="_blank" rel="noopener">
+    <a class="launch-tile" href="https://web.whatsapp.com" target="_blank" rel="noopener" onclick="return openApp(event, 'whatsapp://', 'https://web.whatsapp.com')">
       <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">💬</div>
       <div class="lbl">WhatsApp</div>
-      <div class="sub">Web</div>
+      <div class="sub">Appka</div>
     </a>
-    <a class="launch-tile" href="https://www.messenger.com" target="_blank" rel="noopener">
+    <a class="launch-tile" href="https://www.messenger.com" target="_blank" rel="noopener" onclick="return openApp(event, 'fb-messenger://', 'https://www.messenger.com')">
       <div class="glyph" style="background:rgba(74,122,140,0.16);color:#4A7A8C">💬</div>
       <div class="lbl">Messenger</div>
-      <div class="sub">Web</div>
+      <div class="sub">Appka</div>
     </a>
     <a class="launch-tile" href="http://localhost:5600" target="_blank" rel="noopener" style="border-color:var(--line)">
       <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">⏱️</div>
@@ -1131,7 +1131,23 @@ function escapeHtml(s){
   const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
 
-/* ---------- Push notifications ---------- */
+function openApp(event, appScheme, webUrl){
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  if(!isIOS && !isAndroid){
+    return true; // desktop — zwykły link do web, bez zmian
+  }
+  event.preventDefault();
+  const start = Date.now();
+  window.location.href = appScheme;
+  setTimeout(() => {
+    // jeśli appka się nie otworzyła (strona dalej widoczna po ~1.2s), otwórz web
+    if(Date.now() - start < 2000 && !document.hidden){
+      window.open(webUrl, '_blank');
+    }
+  }, 1200);
+  return false;
+}
 const VAPID_PUBLIC_KEY = 'BOBECtNButN0IKX6bPInCRJRuYGlkPJRWwmv9U5U-vFau97bgh019qd-sYa3CmF-fZ30YcVZfBlFUNxUlq6KTs4';
 
 function urlBase64ToUint8Array(base64String){
