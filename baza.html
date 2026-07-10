@@ -162,6 +162,13 @@
   .heatmap-cell[data-lvl="3"]{ background:#57937a; }
   .heatmap-cell[data-lvl="4"]{ background:var(--sage); }
 
+  /* ---------- Kalendarz ---------- */
+  .cal-box{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+  .cal-connect{ background:var(--gold); border:none; border-radius:8px; padding:10px 16px; color:#14181B; font-weight:700; font-size:12.5px; cursor:pointer; width:100%; }
+  .cal-event{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .cal-event:last-child{ border-bottom:none; }
+  .cal-event .ce-date{ color:var(--sage); font-family:var(--font-mono); font-size:10.5px; }
+
   /* ---------- Licznik wody ---------- */
   .water-box{
     background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px;
@@ -359,6 +366,13 @@
         <button class="water-btn" onclick="addWater(500)">+ Butelka (500ml)</button>
       </div>
     </div>
+
+    <div class="cal-box" id="calBox">
+      <div class="water-top">
+        <span class="water-label">📅 Kalendarz</span>
+      </div>
+      <div id="calContent">Ładowanie…</div>
+    </div>
     <div id="habitsProgress" class="habits-progress"></div>
     <div class="heatmap-box">
       <div class="heatmap-label">◆ Ostatnie 12 tygodni</div>
@@ -430,6 +444,7 @@ function boot(){
   loadEurRate();
   loadWeather();
   renderCountdown();
+  loadCalendar();
   document.getElementById('priorityInput').addEventListener('input', e=>{
     clearTimeout(priorityTimer);
     priorityTimer = setTimeout(()=>savePriority(e.target.value), 500);
@@ -572,6 +587,31 @@ function addWater(amount){
   renderWater();
   queueSave();
 }
+async function loadCalendar(){
+  const box = document.getElementById('calContent');
+  try{
+    const res = await fetch('/api/calendar-events');
+    const json = await res.json();
+    if(!json.connected){
+      box.innerHTML = '<button class="cal-connect" onclick="window.open(\'/api/google-auth-start\',\'_blank\')">Połącz Google Calendar</button>';
+      return;
+    }
+    if(json.events.length === 0){
+      box.innerHTML = '<div class="empty" style="padding:10px 0">Brak wydarzeń w najbliższych 7 dniach</div>';
+      return;
+    }
+    box.innerHTML = json.events.map(ev => {
+      const d = new Date(ev.start);
+      const dateStr = ev.allDay
+        ? d.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit'})
+        : d.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
+      return `<div class="cal-event"><span>${escapeHtml(ev.title)}</span><span class="ce-date">${dateStr}</span></div>`;
+    }).join('');
+  }catch(e){
+    box.innerHTML = '<div class="empty" style="padding:10px 0">Błąd ładowania kalendarza</div>';
+  }
+}
+
 function renderWater(){
   ensureWaterToday();
   const ml = DATA.water.ml;
