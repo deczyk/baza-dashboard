@@ -553,41 +553,41 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 /* ---------- Nawyki ---------- */
 const HABITS = [
-  // RANO — kolejność: budzik → higiena/otoczenie → ruch → śniadanie → plan dnia
-  { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
-  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu' },
-  { id:'h5', period:'Rano', text:'Otworzenie okna / świeże powietrze (1-2 min)' },
-  { id:'h4', period:'Rano', text:'Zasłanie łóżka' },
-  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów' },
-  { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
-  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html' },
-  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki' },
-  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
-  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy' },
-  // DZIEŃ — kolejność: nawyki cykliczne przez cały dzień → okolice lunchu → trening/shake → koniec dnia pracy
-  { id:'h11', period:'Dzień', text:'Wypij wodę do południa' },
-  { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
-  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)', guide:'poradnik-nawyki.html#20-20-20' },
-  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna', guide:'poradnik-nawyki.html#postawa' },
-  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)', guide:'poradnik-nawyki.html#izometria' },
-  { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców' },
-  { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu' },
-  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6] },
-  { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
-  { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku' },
-  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech' },
-  // WIECZÓR — kolejność: przygotowania → odpoczynek → wyciszanie → higiena → sen
-  { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro' },
-  { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki' },
-  { id:'h25', period:'Wieczór', text:'Rozciąganie spokojne (3-5 min)' },
-  { id:'h27', period:'Wieczór', text:'Krótki przegląd dnia: 3 zdania' },
-  { id:'h28', period:'Wieczór', text:'1 rzecz, z której jesteś zadowolony' },
-  { id:'h30', period:'Wieczór', text:'Zgaś mocne światła 30 min przed snem' },
-  { id:'h24', period:'Wieczór', text:'Blok bez telefonu przed snem' },
-  { id:'h23', period:'Wieczór', text:'Mycie twarzy + zębów' },
-  { id:'h31', period:'Wieczór', text:'5 min ciszy / oddechu przed snem' },
-  { id:'h29', period:'Wieczór', text:'Stała pora snu (22:00)' },
-  // SPORT — od aktywności do refleksji/celu
+  // RANO — budzik 7:00
+  { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min', time:'7:00' },
+  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu', time:'7:00' },
+  { id:'h5', period:'Rano', text:'Otworzenie okna / świeże powietrze (1-2 min)', time:'7:05' },
+  { id:'h4', period:'Rano', text:'Zasłanie łóżka', time:'7:05' },
+  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów', time:'7:10' },
+  { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)', time:'7:15' },
+  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html', time:'7:25' },
+  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki', time:'7:30' },
+  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna', time:'7:35' },
+  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy', time:'7:50' },
+  // DZIEŃ
+  { id:'h11', period:'Dzień', text:'Wypij wodę do południa', time:'do 12:00' },
+  { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)', time:'co godzinę' },
+  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)', guide:'poradnik-nawyki.html#20-20-20', time:'co 20 min' },
+  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna', guide:'poradnik-nawyki.html#postawa', time:'na bieżąco' },
+  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)', guide:'poradnik-nawyki.html#izometria', time:'~15:00' },
+  { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców', time:'13:00' },
+  { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu', time:'13:15' },
+  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6], time:'18:00' },
+  { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6], time:'18:30' },
+  { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku', time:'17:30' },
+  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech', time:'~15:30' },
+  // WIECZÓR — telefon offline 22:00, sen 23:00
+  { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro', time:'21:00' },
+  { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki', time:'21:15' },
+  { id:'h25', period:'Wieczór', text:'Rozciąganie spokojne (3-5 min)', time:'21:40' },
+  { id:'h27', period:'Wieczór', text:'Krótki przegląd dnia: 3 zdania', time:'21:50' },
+  { id:'h28', period:'Wieczór', text:'1 rzecz, z której jesteś zadowolony', time:'21:55' },
+  { id:'h24', period:'Wieczór', text:'Blok bez telefonu przed snem', time:'22:00' },
+  { id:'h23', period:'Wieczór', text:'Mycie twarzy + zębów', time:'22:10' },
+  { id:'h30', period:'Wieczór', text:'Zgaś mocne światła 30 min przed snem', time:'22:30' },
+  { id:'h31', period:'Wieczór', text:'5 min ciszy / oddechu przed snem', time:'22:50' },
+  { id:'h29', period:'Wieczór', text:'Stała pora snu (22:00)', time:'23:00' },
+  // SPORT
   { id:'h32', period:'Sport', text:'1 krótki spacer dziennie' },
   { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank', guide:'poradnik-nawyki.html#plank' },
   { id:'h34', period:'Sport', text:'1 dzień bez długiego siedzenia bez przerw' },
@@ -973,7 +973,8 @@ function renderHabits(){
       row.className = 'habit-row' + (done ? ' done' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
       row.onclick = () => toggleHabit(h.id);
       const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
-      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>`;
+      const timeBadge = h.time ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--sage);margin-left:auto;padding-left:10px;white-space:nowrap">${h.time}</span>` : '';
+      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>${timeBadge}`;
       list.appendChild(row);
     });
   });
