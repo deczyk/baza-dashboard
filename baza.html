@@ -251,7 +251,7 @@
     <a class="launch-tile tile-drive" href="https://drive.google.com/drive/folders/18nLqq6sm6Vs5KomdBZFv2Z36UJAu7zM6?usp=sharing" target="_blank" rel="noopener">
       <div class="glyph">📁</div>
       <div class="lbl">Drive</div>
-      <div class="sub">Notatki / dokumenty</div>
+      <div class="sub">Dokumenty</div>
     </a>
     <a class="launch-tile tile-crm" href="https://www.sklepzastodola.pl/panel.html" target="_blank" rel="noopener">
       <div class="glyph">💼</div>
@@ -284,10 +284,20 @@
     <textarea id="priorityInput" placeholder="Jedna najważniejsza rzecz na dziś…" rows="1" oninput="autoResize(this)"></textarea>
   </div>
 
+  <div class="note-add">
+    <div class="pb-label" style="color:var(--sage)">◆ Szybki zapis</div>
+    <textarea id="captureInput" placeholder="Wpisz myśl, notatkę albo zadanie…"></textarea>
+    <div class="save-row" style="gap:8px">
+      <button onclick="captureAsTodo()" style="background:var(--surface-2);color:var(--text);border:1px solid var(--line)">✅ Do zrobienia</button>
+      <button onclick="captureAsNote()">📝 Notatka</button>
+    </div>
+  </div>
+
   <div class="tabs">
     <div class="tab active" data-tab="habits">Nawyki</div>
+    <div class="tab" data-tab="todos">Do zrobienia</div>
+    <div class="tab" data-tab="notes">Notatki</div>
     <div class="tab" data-tab="links">Linki</div>
-    <div class="tab" data-tab="notes">Schowek</div>
   </div>
 
   <section class="panel active" id="panel-habits">
@@ -295,16 +305,16 @@
     <div id="habitsList"></div>
   </section>
 
-  <section class="panel" id="panel-links">
-    <div class="links-grid" id="linksGrid"></div>
+  <section class="panel" id="panel-todos">
+    <div id="todosList"></div>
   </section>
 
   <section class="panel" id="panel-notes">
-    <div class="note-add">
-      <textarea id="noteBodyInput" placeholder="Szybka myśl, która nie pasuje jeszcze nigdzie indziej..."></textarea>
-      <div class="save-row"><button onclick="addNote()">Zapisz</button></div>
-    </div>
     <div id="notesList"></div>
+  </section>
+
+  <section class="panel" id="panel-links">
+    <div class="links-grid" id="linksGrid"></div>
   </section>
 </div>
 
@@ -323,7 +333,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [] };
+let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [] };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -423,7 +433,7 @@ const HABITS = [
   { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu' },
   { id:'h3', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
   { id:'h4', period:'Rano', text:'Mycie twarzy + zębów' },
-  { id:'h5', period:'Rano', text:'Rozciąganie klatki/pleców (2 min)' },
+  { id:'h5', period:'Rano', text:'Rozciąganie klatki/pleców (2 min)', guide:'poradnik-rozciaganie.html' },
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
@@ -543,7 +553,8 @@ function renderHabits(){
       const row = document.createElement('div');
       row.className = 'habit-row' + (done ? ' done' : '');
       row.onclick = () => toggleHabit(h.id);
-      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}</span>`;
+      const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
+      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>`;
       list.appendChild(row);
     });
   });
@@ -593,6 +604,7 @@ async function loadData(){
     if(typeof DATA.xp !== 'number') DATA.xp = 0;
     if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
     if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
+    if(!DATA.todos) DATA.todos = [];
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -626,7 +638,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderHabits(); renderGamification(); renderLinks(); renderNotes(); loadPriority(); }
+function renderAll(){ renderHabits(); renderGamification(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
@@ -657,13 +669,25 @@ function addLinkPrompt(){
 }
 function removeLink(i){ DATA.links.splice(i,1); renderLinks(); queueSave(); }
 
-/* Notes (schowek na myśli) */
-function addNote(){
-  const body = document.getElementById('noteBodyInput').value.trim();
+/* Szybki zapis -> Notatka albo Do zrobienia */
+function captureAsNote(){
+  const input = document.getElementById('captureInput');
+  const body = input.value.trim();
   if(!body) return;
   DATA.notes.unshift({ body, id:Date.now(), date:new Date().toISOString() });
-  document.getElementById('noteBodyInput').value='';
+  input.value='';
   renderNotes(); queueSave();
+  showToast('Zapisano jako notatkę');
+}
+function captureAsTodo(){
+  const input = document.getElementById('captureInput');
+  const body = input.value.trim();
+  if(!body) return;
+  if(!DATA.todos) DATA.todos = [];
+  DATA.todos.unshift({ text:body, done:false, id:Date.now(), date:new Date().toISOString() });
+  input.value='';
+  renderTodos(); queueSave();
+  showToast('Dodano do zrobienia');
 }
 function removeNote(id){
   DATA.notes = DATA.notes.filter(n=>n.id!==id);
@@ -671,7 +695,7 @@ function removeNote(id){
 }
 function renderNotes(){
   const list = document.getElementById('notesList');
-  if(DATA.notes.length===0){ list.innerHTML = '<div class="empty">Schowek pusty</div>'; return; }
+  if(DATA.notes.length===0){ list.innerHTML = '<div class="empty">Brak notatek</div>'; return; }
   list.innerHTML = '';
   DATA.notes.forEach(n=>{
     const el = document.createElement('div');
@@ -681,6 +705,37 @@ function renderNotes(){
                      <div class="nbody">${escapeHtml(n.body)}</div>`;
     list.appendChild(el);
   });
+}
+
+/* Do zrobienia */
+function toggleTodo(id){
+  const t = DATA.todos.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderTodos(); queueSave();
+}
+function removeTodo(id){
+  DATA.todos = DATA.todos.filter(t=>t.id!==id);
+  renderTodos(); queueSave();
+}
+function renderTodos(){
+  const list = document.getElementById('todosList');
+  if(!DATA.todos) DATA.todos = [];
+  if(DATA.todos.length===0){ list.innerHTML = '<div class="empty">Brak zadań</div>'; return; }
+  list.innerHTML = '';
+  DATA.todos.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'habit-row' + (t.done ? ' done' : '');
+    el.onclick = () => toggleTodo(t.id);
+    el.innerHTML = `<input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation(); toggleTodo(${t.id})"><span class="h-text">${escapeHtml(t.text)}</span><span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="margin-left:auto;color:var(--text-muted);cursor:pointer">✕</span>`;
+    list.appendChild(el);
+  });
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
 }
 
 function escapeHtml(s){
