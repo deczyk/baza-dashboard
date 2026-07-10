@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -8,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14181B">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <style>
   :root{
@@ -73,6 +75,7 @@
   .gami-mid{ flex:1; }
   .gami-toprow{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
   .gami-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; }
+  .gami-rank{ font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
   .gami-xp-text{ font-family:var(--font-mono); font-size:10px; color:var(--sage); }
   .gami-bar{ height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden; }
   .gami-bar-fill{ height:100%; background:linear-gradient(90deg, var(--sage), var(--gold)); border-radius:3px; transition:width .4s ease; }
@@ -231,6 +234,7 @@
     <div class="gami-mid">
       <div class="gami-toprow">
         <span class="gami-label">Poziom</span>
+        <span class="gami-rank" id="gamiRank">Brąz</span>
         <span class="gami-xp-text" id="gamiXpText">0 / 100 XP</span>
       </div>
       <div class="gami-bar"><div class="gami-bar-fill" id="gamiBarFill" style="width:0%"></div></div>
@@ -479,10 +483,29 @@ function levelFromXp(xp){
   return { level, inLevel };
 }
 
+const RANKS = [
+  { min:1,  name:'Brąz',    color:'#B08D57' },
+  { min:3,  name:'Srebro',  color:'#C7CCD1' },
+  { min:6,  name:'Złoto',   color:'#D6B35A' },
+  { min:10, name:'Platyna', color:'#8FD9C4' },
+  { min:15, name:'Diament', color:'#8FC7E8' },
+  { min:21, name:'Mistrz',  color:'#C9A876' },
+];
+function rankFromLevel(level){
+  let current = RANKS[0];
+  for(const r of RANKS){ if(level >= r.min) current = r; }
+  return current;
+}
+
 function renderGamification(){
   const xp = DATA.xp || 0;
   const { level, inLevel } = levelFromXp(xp);
+  const rank = rankFromLevel(level);
+
   document.getElementById('gamiLevel').textContent = level;
+  document.getElementById('gamiLevel').style.borderColor = rank.color;
+  document.getElementById('gamiRank').textContent = rank.name;
+  document.getElementById('gamiRank').style.color = rank.color;
   document.getElementById('gamiXpText').textContent = `${inLevel} / 100 XP`;
   document.getElementById('gamiBarFill').style.width = inLevel + '%';
 
