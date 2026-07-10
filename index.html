@@ -89,6 +89,13 @@
   .gami-streak .snum{ font-size:15px; font-weight:700; color:var(--text); }
   .gami-streak .slbl{ font-size:8.5px; color:var(--text-muted); letter-spacing:.06em; text-transform:uppercase; }
 
+  /* ---------- Cytat dnia + wczoraj pominięte ---------- */
+  .quote-box{ text-align:center; padding:10px 16px; margin-bottom:14px; font-style:italic; color:var(--text-muted); font-size:12.5px; line-height:1.5; }
+  .missed-box{ background:rgba(180,102,79,0.10); border:1px solid var(--danger); border-radius:12px; padding:12px 16px; margin-bottom:16px; }
+  .missed-box .mb-label{ font-family:var(--font-mono); font-size:10px; color:var(--danger); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+  .missed-box ul{ margin:0; padding-left:18px; font-size:12.5px; color:var(--text); line-height:1.6; }
+  .missed-box .mb-quote{ margin-top:8px; font-style:italic; color:var(--text-muted); font-size:12px; }
+
   /* ---------- Launcher (hero) ---------- */
   .launcher-label{
     font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.15em; text-transform:uppercase;
@@ -278,6 +285,13 @@
     <div class="readout"><span class="dot" id="syncDot"></span><span id="syncTxt">SYNC OK</span><span id="clock" style="margin-left:auto"></span></div>
     <button id="notifyBtn" onclick="enablePush()" style="margin-top:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--text-muted);border-radius:8px;padding:8px 14px;font-family:var(--font-mono);font-size:11px;cursor:pointer;letter-spacing:.05em">🔔 Włącz powiadomienia</button>
   </header>
+
+  <div class="quote-box" id="quoteBox"></div>
+  <div class="missed-box" id="missedBox" style="display:none">
+    <div class="mb-label">◆ Wczoraj pominięte</div>
+    <ul id="missedList"></ul>
+    <div class="mb-quote" id="missedQuote"></div>
+  </div>
 
   <div class="gami-box">
     <div class="gami-level" id="gamiLevel">1</div>
@@ -618,12 +632,59 @@ function renderHeatmap(){
     grid.appendChild(cell);
   }
 }
+const DAILY_QUOTES = [
+  "Dyskomfort dzisiaj to waluta, którą kupujesz siebie z jutra.",
+  "Nikt nie przyjdzie zrobić tego za ciebie. To zawsze byłeś tylko ty.",
+  "Ciało zapomina wymówki szybciej niż umysł je wymyśla.",
+  "Rób to, na co nie masz ochoty — właśnie wtedy się liczy.",
+  "Świat nie czeka, aż będziesz gotowy. Zacznij niegotowy.",
+  "Wygoda jest cichym złodziejem — kradnie powoli, nie zauważysz kiedy.",
+  "Trudność nie jest przeszkodą na drodze. Trudność jest drogą.",
+  "To, co dziś wydaje się ciężarem, jutro będzie fundamentem.",
+  "Nie musisz czuć motywacji. Musisz tylko zacząć ruch.",
+  "Umysł podda się na długo przed ciałem — jeśli mu na to pozwolisz.",
+  "Codzienna dyscyplina nie krzyczy. Buduje po cichu, dzień po dniu.",
+  "Wymówka, którą akceptujesz dzisiaj, wraca jutro silniejsza.",
+  "Nie ścigasz się z nikim. Ścigasz się z wersją siebie sprzed roku.",
+  "Ból wysiłku mija. Ból żalu zostaje.",
+  "Zrób to zmęczony. Zrób to bez ochoty. Po prostu zrób.",
+  "Charakter buduje się w momentach, których nikt nie widzi.",
+  "Łatwa droga prowadzi tam, gdzie już byłeś.",
+  "Twoje granice są tam, gdzie umysł powiedział 'dość' — nie ciało.",
+  "Konsekwencja bije talent, który się nie pojawia.",
+  "To nie jest dzień na wymówki. Żaden dzień nie jest.",
+  "Rób mały krok, kiedy nie widzisz całej drogi.",
+  "Silni nie czują się silni każdego dnia. Po prostu działają mimo to.",
+  "Jutro podziękujesz sobie za to, co zrobiłeś dzisiaj wbrew sobie.",
+  "Nie czekaj na idealny moment. On nie istnieje.",
+  "Zmiana zaczyna się w chwili, gdy przestajesz negocjować z samym sobą.",
+  "Twoje nawyki dzisiaj piszą historię, którą przeczytasz za rok.",
+  "Nikt nie zobaczy powtórzenia numer siedem. Ale ty je poczujesz.",
+  "Bądź twardszy dla siebie niż świat musi być.",
+  "Droga na skróty prowadzi donikąd, tylko wolniej to zauważysz.",
+  "Dyscyplina to wolność — od żalu, od wymówek, od siebie z wczoraj.",
+];
+
+function getTodayQuote(){
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+}
+function habitsForDate(dateObj){
+  const dow = dateObj.getDay();
+  return HABITS.filter(h => !h.days || h.days.includes(dow));
+}
+
 function ensureHabitsToday(){
   if(!DATA.habits) DATA.habits = { date:"", done:{} };
   if(!DATA.habitHistory) DATA.habitHistory = {};
   if(DATA.habits.date && DATA.habits.date !== todayStr()){
-    const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
-    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: getTodayHabits().length };
+    const oldDate = new Date(DATA.habits.date + 'T12:00:00');
+    const oldHabits = habitsForDate(oldDate);
+    const doneCount = oldHabits.filter(h => DATA.habits.done[h.id]).length;
+    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: oldHabits.length };
+
+    const missed = oldHabits.filter(h => !DATA.habits.done[h.id]).map(h => h.text);
+    DATA.yesterdayMissed = { date: DATA.habits.date, missed };
   }
   if(DATA.habits.date !== todayStr()){
     DATA.habits = { date: todayStr(), done: {} };
@@ -756,6 +817,20 @@ async function addCalendarEvent(){
     loadCalendar();
   }catch(e){
     showToast('Błąd zapisu');
+  }
+}
+
+function renderQuoteAndMissed(){
+  document.getElementById('quoteBox').textContent = '"' + getTodayQuote() + '"';
+
+  const box = document.getElementById('missedBox');
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  if(DATA.yesterdayMissed && DATA.yesterdayMissed.date === yesterday && DATA.yesterdayMissed.missed.length > 0){
+    box.style.display = 'block';
+    document.getElementById('missedList').innerHTML = DATA.yesterdayMissed.missed.map(t => `<li>${escapeHtml(t)}</li>`).join('');
+    document.getElementById('missedQuote').textContent = getTodayQuote();
+  } else {
+    box.style.display = 'none';
   }
 }
 
@@ -942,7 +1017,7 @@ function switchTab(name){
 /* ---------- Sync (przez /api/baza-data, klucz chowa Vercel) ---------- */
 async function loadData(){
   try{
-    const res = await fetch(API);
+    const res = await fetch(API, { headers:{ 'X-Panel-Password': CONFIG.PIN }});
     if(!res.ok) throw new Error('fetch failed');
     const json = await res.json();
     DATA = json.record && (json.record.links || json.record.notes || json.record.priority || json.record.habits) ? json.record : DATA;
@@ -971,7 +1046,7 @@ async function saveData(){
   try{
     const res = await fetch(API, {
       method:'PUT',
-      headers:{ 'Content-Type':'application/json' },
+      headers:{ 'Content-Type':'application/json', 'X-Panel-Password': CONFIG.PIN },
       body: JSON.stringify(DATA)
     });
     if(!res.ok) throw new Error('save failed');
@@ -987,7 +1062,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
+function renderAll(){ renderQuoteAndMissed(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
