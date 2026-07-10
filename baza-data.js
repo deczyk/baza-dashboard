@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const BIN_ID = process.env.JSONBIN_BIN_ID;
   const API_KEY = process.env.JSONBIN_API_KEY;
 
