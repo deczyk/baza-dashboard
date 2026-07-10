@@ -1,6 +1,6 @@
 {
   "crons": [
-    { "path": "/api/send-reminders?period=rano", "schedule": "0 6 * * *" },
+    { "path": "/api/send-reminders?period=rano", "schedule": "0 5 * * *" },
     { "path": "/api/send-reminders?period=dzien", "schedule": "0 12 * * *" },
     { "path": "/api/send-reminders?period=wieczor", "schedule": "30 18 * * *" }
   ]
