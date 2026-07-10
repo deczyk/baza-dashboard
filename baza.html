@@ -10,6 +10,9 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#14181B;
@@ -142,6 +145,22 @@
   .habit-row .h-text{ font-size:13.5px; }
   .habit-row.done{ opacity:.5; }
   .habit-row.done .h-text{ text-decoration:line-through; color:var(--text-muted); }
+  @keyframes checkPop{ 0%{transform:scale(1);} 40%{transform:scale(1.15);} 100%{transform:scale(1);} }
+  .habit-row.just-checked{ animation:checkPop .3s ease; }
+  @keyframes levelFlash{ 0%{transform:scale(1);} 50%{transform:scale(1.25); box-shadow:0 0 20px var(--gold);} 100%{transform:scale(1);} }
+  .gami-level.level-up{ animation:levelFlash .6s ease; }
+  @keyframes confettiFall{ 0%{transform:translateY(-10px) rotate(0deg); opacity:1;} 100%{transform:translateY(300px) rotate(360deg); opacity:0;} }
+  .confetti-piece{ position:fixed; top:0; width:8px; height:8px; z-index:999; pointer-events:none; animation:confettiFall 1.4s ease-in forwards; }
+
+  /* ---------- Heatmapa nawyków ---------- */
+  .heatmap-box{ margin:22px 0; }
+  .heatmap-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+  .heatmap-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(11px, 1fr)); gap:3px; }
+  .heatmap-cell{ width:100%; aspect-ratio:1; border-radius:2px; background:var(--surface-2); }
+  .heatmap-cell[data-lvl="1"]{ background:#2d4a3f; }
+  .heatmap-cell[data-lvl="2"]{ background:#3f6b58; }
+  .heatmap-cell[data-lvl="3"]{ background:#57937a; }
+  .heatmap-cell[data-lvl="4"]{ background:var(--sage); }
 
   /* ---------- Licznik wody ---------- */
   .water-box{
@@ -341,6 +360,10 @@
       </div>
     </div>
     <div id="habitsProgress" class="habits-progress"></div>
+    <div class="heatmap-box">
+      <div class="heatmap-label">◆ Ostatnie 12 tygodni</div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+    </div>
     <div id="habitsList"></div>
   </section>
 
@@ -372,7 +395,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
+let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -484,8 +507,43 @@ const HABITS = [
 ];
 const PERIODS = ['Rano', 'Dzień', 'Wieczór'];
 
-function ensureHabitsToday(){
+function renderHeatmap(){
+  const grid = document.getElementById('heatmapGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  const days = 84; // 12 tygodni
+  const today = new Date();
+  for(let i = days - 1; i >= 0; i--){
+    const d = new Date(today.getTime() - i * 86400000);
+    const key = d.toISOString().slice(0,10);
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    cell.title = key;
+
+    let record = DATA.habitHistory ? DATA.habitHistory[key] : null;
+    if(key === todayStr()){
+      const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+      record = { done: doneCount, total: HABITS.length };
+    }
+    if(record && record.total > 0){
+      const pct = record.done / record.total;
+      let lvl = 0;
+      if(pct >= 1) lvl = 4;
+      else if(pct >= 0.66) lvl = 3;
+      else if(pct >= 0.33) lvl = 2;
+      else if(pct > 0) lvl = 1;
+      if(lvl > 0) cell.setAttribute('data-lvl', lvl);
+      cell.title = `${key}: ${record.done}/${record.total}`;
+    }
+    grid.appendChild(cell);
+  }
+}
   if(!DATA.habits) DATA.habits = { date:"", done:{} };
+  if(!DATA.habitHistory) DATA.habitHistory = {};
+  if(DATA.habits.date && DATA.habits.date !== todayStr()){
+    const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: HABITS.length };
+  }
   if(DATA.habits.date !== todayStr()){
     DATA.habits = { date: todayStr(), done: {} };
   }
@@ -513,10 +571,27 @@ function renderWater(){
   document.getElementById('waterBarFill').style.width = pct + '%';
 }
 
+function fireConfetti(){
+  const colors = ['#C9A876', '#6B9C89', '#E8E4DB'];
+  for(let i=0; i<24; i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random()*100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDelay = (Math.random()*0.3) + 's';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(piece);
+    setTimeout(()=>piece.remove(), 1800);
+  }
+}
+
 function toggleHabit(id){
   ensureHabitsToday();
   const wasDone = !!DATA.habits.done[id];
   DATA.habits.done[id] = !wasDone;
+  DATA._justToggled = id;
+
+  const prevLevel = levelFromXp(DATA.xp || 0).level;
 
   if(!wasDone){
     DATA.xp = (DATA.xp || 0) + 10;
@@ -528,6 +603,18 @@ function toggleHabit(id){
   renderHabits();
   renderGamification();
   queueSave();
+
+  if(!wasDone){
+    const newLevel = levelFromXp(DATA.xp).level;
+    if(newLevel > prevLevel){
+      document.getElementById('gamiLevel').classList.add('level-up');
+      setTimeout(()=>document.getElementById('gamiLevel').classList.remove('level-up'), 700);
+    }
+    const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+    if(doneCount === HABITS.length){
+      fireConfetti();
+    }
+  }
 }
 
 function checkStreak(){
@@ -612,7 +699,7 @@ function renderHabits(){
     items.forEach(h => {
       const done = !!DATA.habits.done[h.id];
       const row = document.createElement('div');
-      row.className = 'habit-row' + (done ? ' done' : '');
+      row.className = 'habit-row' + (done ? ' done' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
       row.onclick = () => toggleHabit(h.id);
       const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
       row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>`;
@@ -622,10 +709,13 @@ function renderHabits(){
 }
 function loadPriority(){
   const input = document.getElementById('priorityInput');
-  if(DATA.priority && DATA.priority.date === todayStr()){
-    input.value = DATA.priority.text || '';
+  if(DATA.priority && DATA.priority.date === todayStr() && DATA.priority.text){
+    input.value = DATA.priority.text;
+    input.placeholder = 'Jedna najważniejsza rzecz na dziś…';
   } else {
     input.value = '';
+    const oldestTodo = (DATA.todos || []).filter(t=>!t.done).slice(-1)[0];
+    input.placeholder = oldestTodo ? `Podpowiedź: ${oldestTodo.text}` : 'Jedna najważniejsza rzecz na dziś…';
   }
   autoResize(input);
 }
@@ -667,6 +757,7 @@ async function loadData(){
     if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
     if(!DATA.todos) DATA.todos = [];
     if(!DATA.water) DATA.water = { date:"", ml:0 };
+    if(!DATA.habitHistory) DATA.habitHistory = {};
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -700,7 +791,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderHabits(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
+function renderAll(){ renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
@@ -751,9 +842,37 @@ function captureAsTodo(){
   renderTodos(); queueSave();
   showToast('Dodano do zrobienia');
 }
+let lastDeleted = null;
+
 function removeNote(id){
-  DATA.notes = DATA.notes.filter(n=>n.id!==id);
+  const idx = DATA.notes.findIndex(n=>n.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'note', item: DATA.notes[idx], index: idx };
+  DATA.notes.splice(idx, 1);
   renderNotes(); queueSave();
+  showUndoToast('Usunięto notatkę');
+}
+function editNote(id){
+  const n = DATA.notes.find(n=>n.id===id);
+  if(!n) return;
+  const updated = prompt('Edytuj notatkę:', n.body);
+  if(updated === null) return;
+  n.body = updated.trim();
+  renderNotes(); queueSave();
+}
+function undoDelete(){
+  if(!lastDeleted) return;
+  if(lastDeleted.type === 'note') DATA.notes.splice(lastDeleted.index, 0, lastDeleted.item);
+  if(lastDeleted.type === 'todo') DATA.todos.splice(lastDeleted.index, 0, lastDeleted.item);
+  lastDeleted = null;
+  renderNotes(); renderTodos(); queueSave();
+  document.getElementById('toast').classList.remove('show');
+}
+function showUndoToast(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = `${msg} <span onclick="undoDelete()" style="color:var(--gold);text-decoration:underline;cursor:pointer;margin-left:8px">Cofnij</span>`;
+  t.classList.add('show');
+  setTimeout(()=>{ if(!t.innerHTML.includes('Cofnij')) return; t.classList.remove('show'); lastDeleted=null; }, 5000);
 }
 function renderNotes(){
   const list = document.getElementById('notesList');
@@ -763,7 +882,7 @@ function renderNotes(){
     const el = document.createElement('div');
     el.className = 'note';
     const d = n.date ? new Date(n.date).toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-    el.innerHTML = `<div class="nhead"><span class="ndate">${d}</span><div class="del" onclick="removeNote(${n.id})">✕</div></div>
+    el.innerHTML = `<div class="nhead"><span class="ndate">${d}</span><div style="display:flex;gap:10px"><span class="del" onclick="editNote(${n.id})" style="color:var(--sage)">✎</span><span class="del" onclick="removeNote(${n.id})">✕</span></div></div>
                      <div class="nbody">${escapeHtml(n.body)}</div>`;
     list.appendChild(el);
   });
@@ -776,7 +895,19 @@ function toggleTodo(id){
   renderTodos(); queueSave();
 }
 function removeTodo(id){
-  DATA.todos = DATA.todos.filter(t=>t.id!==id);
+  const idx = DATA.todos.findIndex(t=>t.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'todo', item: DATA.todos[idx], index: idx };
+  DATA.todos.splice(idx, 1);
+  renderTodos(); queueSave();
+  showUndoToast('Usunięto zadanie');
+}
+function editTodo(id){
+  const t = DATA.todos.find(t=>t.id===id);
+  if(!t) return;
+  const updated = prompt('Edytuj zadanie:', t.text);
+  if(updated === null) return;
+  t.text = updated.trim();
   renderTodos(); queueSave();
 }
 function renderTodos(){
@@ -788,7 +919,7 @@ function renderTodos(){
     const el = document.createElement('div');
     el.className = 'habit-row' + (t.done ? ' done' : '');
     el.onclick = () => toggleTodo(t.id);
-    el.innerHTML = `<input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation(); toggleTodo(${t.id})"><span class="h-text">${escapeHtml(t.text)}</span><span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="margin-left:auto;color:var(--text-muted);cursor:pointer">✕</span>`;
+    el.innerHTML = `<input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation(); toggleTodo(${t.id})"><span class="h-text">${escapeHtml(t.text)}</span><span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span><span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>`;
     list.appendChild(el);
   });
 }
