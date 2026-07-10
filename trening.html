@@ -43,12 +43,36 @@
   .principle .pnum{ font-family:var(--font-mono); color:var(--gold); font-weight:700; flex-shrink:0; }
   .principle p{ margin:0; font-size:13.5px; line-height:1.55; color:var(--text); }
   .principle b{ color:var(--gold); }
+
+  /* ---------- Log serii ---------- */
+  .log-box{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .log-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .log-chip{ background:var(--surface-2); border:1px solid var(--sage); color:var(--sage); border-radius:20px; padding:3px 10px; font-family:var(--font-mono); font-size:11.5px; display:flex; align-items:center; gap:6px; }
+  .log-chip .rm{ cursor:pointer; opacity:.6; }
+  .log-add{ display:flex; gap:6px; }
+  .log-add input{ width:60px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:6px 8px; color:var(--text); font-family:var(--font-sans); font-size:12.5px; }
+  .log-add button{ background:var(--gold); border:none; border-radius:6px; padding:6px 12px; color:#14181B; font-weight:700; font-size:12px; cursor:pointer; }
+  .log-empty{ font-size:11px; color:var(--text-muted); margin-bottom:8px; }
+
+  /* ---------- Podsumowanie tygodnia ---------- */
+  .week-summary{ background:linear-gradient(135deg, rgba(107,156,137,0.10), rgba(201,168,118,0.06)); border:1px solid var(--sage); border-radius:14px; padding:18px 20px; margin-bottom:24px; }
+  .week-summary h2{ margin:0 0 4px; border:none; padding:0; color:var(--sage); }
+  .week-summary .ws-sub{ font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+  .ws-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .ws-row:last-child{ border-bottom:none; }
+  .ws-row .ws-total{ font-family:var(--font-mono); color:var(--gold); font-weight:700; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="eyebrow">◆ Trening</div>
   <h1>Kalistenika — budowa masy mięśniowej</h1>
+
+  <div class="week-summary" id="weekSummaryBox" style="display:none">
+    <h2>◆ Podsumowanie tygodnia</h2>
+    <div class="ws-sub">Suma powtórzeń z ostatnich 7 dni</div>
+    <div id="weekSummaryList"></div>
+  </div>
 
   <div class="intro">
     Plan bez sprzętu, 4-5 dni/tydzień, rotacja <b>Push / Pull / Nogi</b>. Poziom: średniozaawansowany po przerwie.
@@ -198,5 +222,126 @@
   </div>
 
 </div>
+
+<script>
+const API = '/api/baza-data';
+let DATA = {};
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+async function loadData(){
+  try{
+    const res = await fetch(API);
+    const json = await res.json();
+    DATA = json.record || {};
+  }catch(e){ DATA = {}; }
+  if(!DATA.workoutLog) DATA.workoutLog = {};
+  if(!DATA.workoutLog[todayStr()]) DATA.workoutLog[todayStr()] = {};
+  initExerciseLogs();
+  renderWeekSummary();
+}
+
+function renderWeekSummary(){
+  const box = document.getElementById('weekSummaryBox');
+  const list = document.getElementById('weekSummaryList');
+  const isSunday = new Date().getDay() === 0;
+  if(!isSunday){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+
+  const totals = {};
+  for(let i = 0; i < 7; i++){
+    const d = new Date(Date.now() - i * 86400000);
+    const key = d.toISOString().slice(0,10);
+    const dayLog = DATA.workoutLog[key];
+    if(!dayLog) continue;
+    Object.entries(dayLog).forEach(([exercise, sets]) => {
+      const sum = sets.reduce((a,b) => a+b, 0);
+      totals[exercise] = (totals[exercise] || 0) + sum;
+    });
+  }
+
+  const entries = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+  if(entries.length === 0){
+    list.innerHTML = '<div class="log-empty">Brak zalogowanych serii w tym tygodniu</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([name, total]) =>
+    `<div class="ws-row"><span>${escapeHtml(name)}</span><span class="ws-total">${total} powt.</span></div>`
+  ).join('');
+}
+
+async function saveData(){
+  try{
+    await fetch(API, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(DATA)
+    });
+  }catch(e){}
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+function initExerciseLogs(){
+  document.querySelectorAll('.ex-card').forEach(card => {
+    const nameEl = card.querySelector('.ex-name');
+    if(!nameEl) return;
+    const name = nameEl.textContent.trim();
+
+    const logBox = document.createElement('div');
+    logBox.className = 'log-box';
+    logBox.innerHTML = `
+      <div class="log-chips" id="chips-${cssId(name)}"></div>
+      <div class="log-add">
+        <input type="number" id="input-${cssId(name)}" placeholder="powt." min="0">
+        <button onclick="addSet('${escapeJs(name)}')">+ Dodaj serię</button>
+      </div>
+    `;
+    card.appendChild(logBox);
+    renderChips(name);
+  });
+}
+
+function cssId(name){ return name.replace(/[^a-zA-Z0-9]/g, ''); }
+function escapeJs(name){ return name.replace(/'/g, "\\'"); }
+
+function renderChips(name){
+  const container = document.getElementById(`chips-${cssId(name)}`);
+  if(!container) return;
+  const sets = (DATA.workoutLog[todayStr()] && DATA.workoutLog[todayStr()][name]) || [];
+  if(sets.length === 0){
+    container.innerHTML = '<span class="log-empty">Brak serii dzisiaj</span>';
+    return;
+  }
+  container.innerHTML = sets.map((reps, i) =>
+    `<span class="log-chip">${reps} powt. <span class="rm" onclick="removeSet('${escapeJs(name)}', ${i})">✕</span></span>`
+  ).join('');
+}
+
+function addSet(name){
+  const input = document.getElementById(`input-${cssId(name)}`);
+  const reps = parseInt(input.value);
+  if(!reps || reps <= 0) return;
+  if(!DATA.workoutLog[todayStr()]) DATA.workoutLog[todayStr()] = {};
+  if(!DATA.workoutLog[todayStr()][name]) DATA.workoutLog[todayStr()][name] = [];
+  DATA.workoutLog[todayStr()][name].push(reps);
+  input.value = '';
+  renderChips(name);
+  saveData();
+}
+
+function removeSet(name, index){
+  DATA.workoutLog[todayStr()][name].splice(index, 1);
+  renderChips(name);
+  saveData();
+}
+
+loadData();
+</script>
 </body>
 </html>
