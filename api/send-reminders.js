@@ -9,7 +9,11 @@ const HABITS = [
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
-  { id:'h14', period:'Dzień', text:'Trening (Push/Pull/Nogi)' },
+  { id:'h14', period:'Dzień', text:'Trening (Push/Pull/Nogi)', days:[1,2,3,5,6] },
+  { id:'h15', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)' },
+  { id:'h16', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
+  { id:'h17', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
+  { id:'h18', period:'Wieczór', text:'15-20 min czytania / nauki' },
   { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
   { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
   { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
@@ -50,7 +54,9 @@ module.exports = async function handler(req, res) {
     const today = new Date().toISOString().slice(0, 10);
     const doneToday = (data.habits && data.habits.date === today) ? data.habits.done : {};
 
-    const remaining = HABITS.filter(h => h.period === period && !doneToday[h.id]);
+    const dow = new Date().getDay();
+    const todayHabits = HABITS.filter(h => !h.days || h.days.includes(dow));
+    const remaining = todayHabits.filter(h => h.period === period && !doneToday[h.id]);
 
     if (remaining.length === 0) {
       res.status(200).json({ skipped: true, reason: 'Wszystko już zrobione w tym okresie' });
