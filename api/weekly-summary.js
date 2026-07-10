@@ -1,4 +1,4 @@
-const webpush = require('web-push');
+const { Resend } = require('resend');
 
 const HABITS = [
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
@@ -18,8 +18,8 @@ const HABITS = [
   { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu' },
   { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców' },
-  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', days:[1,2,3,5,6] },
-  { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
+  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)' },
+  { id:'h19', period:'Dzień', text:'Shake białkowy' },
   { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku' },
   { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia' },
   { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki' },
@@ -40,28 +40,15 @@ const HABITS = [
 ];
 
 module.exports = async function handler(req, res) {
-  // Weryfikacja że to Vercel Cron woła tę funkcję, nie ktoś obcy
   const authHeader = req.headers['authorization'];
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
-  const periodParam = req.query.period; // 'rano' | 'dzien' | 'wieczor'
-  const PERIOD_MAP = { rano: 'Rano', dzien: 'Dzień', wieczor: 'Wieczór' };
-  const period = PERIOD_MAP[periodParam];
-  if (!period) {
-    res.status(400).json({ error: 'Nieznany period' });
-    return;
-  }
   const BIN_ID = process.env.JSONBIN_BIN_ID;
   const API_KEY = process.env.JSONBIN_API_KEY;
-
-  webpush.setVapidDetails(
-    'mailto:kontakt@sklepzastodola.pl',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
     const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
@@ -69,37 +56,49 @@ module.exports = async function handler(req, res) {
     });
     const json = await r.json();
     const data = json.record || {};
+    const history = data.habitHistory || {};
 
-    const today = new Date().toISOString().slice(0, 10);
-    const doneToday = (data.habits && data.habits.date === today) ? data.habits.done : {};
-
-    const dow = new Date().getDay();
-    const todayHabits = HABITS.filter(h => !h.days || h.days.includes(dow));
-    const remaining = todayHabits.filter(h => h.period === period && !doneToday[h.id]);
-
-    if (remaining.length === 0) {
-      res.status(200).json({ skipped: true, reason: 'Wszystko już zrobione w tym okresie' });
-      return;
+    // Ostatnie 7 dni (łącznie z dziś)
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      let record = history[key];
+      if (key === new Date().toISOString().slice(0,10) && data.habits && data.habits.date === key) {
+        const doneCount = HABITS.filter(h => data.habits.done[h.id]).length;
+        record = { done: doneCount, total: HABITS.length };
+      }
+      days.push({ date: key, done: record?.done || 0, total: record?.total || HABITS.length });
     }
 
-    const subscriptions = data.pushSubscriptions || [];
-    if (subscriptions.length === 0) {
-      res.status(200).json({ skipped: true, reason: 'Brak zapisanych subskrypcji' });
-      return;
-    }
+    const totalDone = days.reduce((s, d) => s + d.done, 0);
+    const totalPossible = days.reduce((s, d) => s + d.total, 0);
+    const pct = totalPossible > 0 ? Math.round((totalDone / totalPossible) * 100) : 0;
+    const streak = data.streak?.count || 0;
+    const xp = data.xp || 0;
+    const level = Math.floor(xp / 100) + 1;
 
-    const payload = JSON.stringify({
-      title: `${period} — ${remaining.length} do zrobienia`,
-      body: remaining.map(h => h.text).join(', '),
-      url: '/',
-      tag: 'baza-habits-' + period
+    const rows = days.map(d => `<tr><td style="padding:6px 12px">${d.date}</td><td style="padding:6px 12px">${d.done}/${d.total}</td></tr>`).join('');
+
+    const html = `
+      <div style="font-family:sans-serif;background:#14181B;color:#E8E4DB;padding:24px;border-radius:12px">
+        <h2 style="color:#C9A876">Podsumowanie tygodnia — Baza</h2>
+        <p>Poziom <b>${level}</b> · <b>${xp} XP</b> · 🔥 streak <b>${streak}</b> dni</p>
+        <p>Średnia ukończenia nawyków w tym tygodniu: <b>${pct}%</b> (${totalDone}/${totalPossible})</p>
+        <table style="border-collapse:collapse;margin-top:12px;width:100%">
+          ${rows}
+        </table>
+      </div>
+    `;
+
+    await resend.emails.send({
+      from: 'Baza <onboarding@resend.dev>',
+      to: process.env.SUMMARY_EMAIL_TO,
+      subject: `Podsumowanie tygodnia — ${pct}% ukończenia`,
+      html
     });
 
-    const results = await Promise.allSettled(
-      subscriptions.map(sub => webpush.sendNotification(sub, payload))
-    );
-
-    res.status(200).json({ sent: results.length, remaining: remaining.length });
+    res.status(200).json({ sent: true, pct });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
