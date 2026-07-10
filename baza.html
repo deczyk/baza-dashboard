@@ -81,7 +81,7 @@
   }
   .status-card .sc-label{ font-family:var(--font-mono); font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
   .status-card .sc-value{ font-size:16px; font-weight:700; color:var(--text); }
-  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); }
+  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); line-height:1.4; white-space:normal; }
 
   /* ---------- Priorytet dnia ---------- */
   .priority-box{
@@ -205,10 +205,11 @@
       <span class="sc-value" id="eurValue">—</span>
       <span class="sc-sub" id="eurDate">ładowanie…</span>
     </div>
-    <div class="status-card">
-      <span class="sc-label">Katowice</span>
+    <div class="status-card" style="grid-column:span 1">
+      <span class="sc-label">Tarnowskie Góry</span>
       <span class="sc-value" id="weatherValue">—</span>
       <span class="sc-sub" id="weatherSub">ładowanie…</span>
+      <span class="sc-sub" id="weatherExtra"></span>
     </div>
     <div class="status-card">
       <span class="sc-label">Mlekomat #1</span>
@@ -318,12 +319,19 @@ const WMO_LABELS = {
 };
 async function loadWeather(){
   try{
-    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.2649&longitude=19.0238&current=temperature_2m,weather_code&timezone=Europe/Warsaw');
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4468&longitude=18.8628&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&timezone=Europe/Warsaw');
     const json = await res.json();
-    const temp = Math.round(json.current.temperature_2m);
-    const label = WMO_LABELS[json.current.weather_code] || 'Zmiennie';
+    const c = json.current;
+    const temp = Math.round(c.temperature_2m);
+    const feels = Math.round(c.apparent_temperature);
+    const label = WMO_LABELS[c.weather_code] || 'Zmiennie';
     document.getElementById('weatherValue').textContent = temp + '°C';
-    document.getElementById('weatherSub').textContent = label;
+    document.getElementById('weatherSub').textContent = label + ' · odczuwalna ' + feels + '°C';
+    const extraBits = [];
+    extraBits.push('💨 ' + Math.round(c.wind_speed_10m) + ' km/h');
+    extraBits.push('💧 ' + Math.round(c.relative_humidity_2m) + '%');
+    if(c.precipitation > 0) extraBits.push('🌧 ' + c.precipitation.toFixed(1) + 'mm');
+    document.getElementById('weatherExtra').textContent = extraBits.join('  ·  ');
   }catch(e){
     document.getElementById('weatherValue').textContent = '—';
     document.getElementById('weatherSub').textContent = 'brak danych';
@@ -393,8 +401,6 @@ function queueSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveData, 600);
 }
-
-async function saveData(){
   try{
     const res = await fetch(JSONBIN_BASE, {
       method:'PUT',
