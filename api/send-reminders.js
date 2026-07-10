@@ -9,11 +9,10 @@ const HABITS = [
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
-  { id:'h9', period:'Dzień', text:'5 min ciszy/oddechu' },
   { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
   { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
   { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
-  { id:'h13', period:'Wieczór', text:'Krótki przegląd dnia (3 zdania)' },
+  { id:'h13', period:'Wieczór', text:'5 min ciszy + krótki przegląd dnia (3 zdania)' },
 ];
 
 module.exports = async function handler(req, res) {
