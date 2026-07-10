@@ -1,4 +1,10 @@
 module.exports = async function handler(req, res) {
+  const providedPassword = req.headers['x-panel-password'];
+  if (providedPassword !== process.env.PANEL_PASSWORD) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
   const BIN_ID = process.env.JSONBIN_BIN_ID;
   const API_KEY = process.env.JSONBIN_API_KEY;
 
