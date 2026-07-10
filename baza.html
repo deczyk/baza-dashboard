@@ -143,6 +143,23 @@
   .habit-row.done{ opacity:.5; }
   .habit-row.done .h-text{ text-decoration:line-through; color:var(--text-muted); }
 
+  /* ---------- Licznik wody ---------- */
+  .water-box{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px;
+  }
+  .water-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .water-label{ font-family:var(--font-mono); font-size:10px; color:var(--sage); letter-spacing:.12em; text-transform:uppercase; }
+  .water-amount{ font-family:var(--font-mono); font-size:13px; color:var(--text); }
+  .water-bar{ height:8px; background:var(--surface-2); border-radius:4px; overflow:hidden; margin-bottom:12px; }
+  .water-bar-fill{ height:100%; background:linear-gradient(90deg, #4A7A8C, var(--sage)); border-radius:4px; transition:width .3s ease; }
+  .water-actions{ display:flex; gap:8px; }
+  .water-btn{
+    flex:1; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 0; font-size:12.5px; font-weight:600; cursor:pointer; font-family:var(--font-sans);
+  }
+  .water-btn:active{ transform:scale(.96); }
+  .water-btn.minus{ flex:0 0 44px; color:var(--text-muted); }
+
   .launch-tile .glyph{
     width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
     font-size:20px;
@@ -247,7 +264,7 @@
   </div>
 
   <div class="launcher-label">◆ Start tutaj</div>
-  <div class="launcher" style="grid-template-columns:repeat(2,1fr)">
+  <div class="launcher" style="grid-template-columns:repeat(3,1fr)">
     <a class="launch-tile tile-drive" href="https://drive.google.com/drive/folders/18nLqq6sm6Vs5KomdBZFv2Z36UJAu7zM6?usp=sharing" target="_blank" rel="noopener">
       <div class="glyph">📁</div>
       <div class="lbl">Drive</div>
@@ -257,6 +274,11 @@
       <div class="glyph">💼</div>
       <div class="lbl">Panel</div>
       <div class="sub">CRM</div>
+    </a>
+    <a class="launch-tile tile-tasks" href="https://claude.ai" target="_blank" rel="noopener">
+      <div class="glyph">✨</div>
+      <div class="lbl">Claude</div>
+      <div class="sub">Chat / appka</div>
     </a>
   </div>
 
@@ -301,6 +323,18 @@
   </div>
 
   <section class="panel active" id="panel-habits">
+    <div class="water-box">
+      <div class="water-top">
+        <span class="water-label">💧 Nawodnienie</span>
+        <span class="water-amount" id="waterAmount">0 / 2000 ml</span>
+      </div>
+      <div class="water-bar"><div class="water-bar-fill" id="waterBarFill" style="width:0%"></div></div>
+      <div class="water-actions">
+        <button class="water-btn minus" onclick="addWater(-250)">−</button>
+        <button class="water-btn" onclick="addWater(250)">+ Szklanka (250ml)</button>
+        <button class="water-btn" onclick="addWater(500)">+ Butelka (500ml)</button>
+      </div>
+    </div>
     <div id="habitsProgress" class="habits-progress"></div>
     <div id="habitsList"></div>
   </section>
@@ -333,7 +367,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [] };
+let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -437,11 +471,10 @@ const HABITS = [
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
   { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
-  { id:'h9', period:'Dzień', text:'5 min ciszy/oddechu' },
   { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
   { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
   { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
-  { id:'h13', period:'Wieczór', text:'Krótki przegląd dnia (3 zdania)' },
+  { id:'h13', period:'Wieczór', text:'5 min ciszy + krótki przegląd dnia (3 zdania)' },
 ];
 const PERIODS = ['Rano', 'Dzień', 'Wieczór'];
 
@@ -450,6 +483,28 @@ function ensureHabitsToday(){
   if(DATA.habits.date !== todayStr()){
     DATA.habits = { date: todayStr(), done: {} };
   }
+}
+
+/* ---------- Woda ---------- */
+const WATER_GOAL = 2000;
+function ensureWaterToday(){
+  if(!DATA.water) DATA.water = { date:"", ml:0 };
+  if(DATA.water.date !== todayStr()){
+    DATA.water = { date: todayStr(), ml:0 };
+  }
+}
+function addWater(amount){
+  ensureWaterToday();
+  DATA.water.ml = Math.max(0, DATA.water.ml + amount);
+  renderWater();
+  queueSave();
+}
+function renderWater(){
+  ensureWaterToday();
+  const ml = DATA.water.ml;
+  const pct = Math.min(100, Math.round((ml / WATER_GOAL) * 100));
+  document.getElementById('waterAmount').textContent = `${ml} / ${WATER_GOAL} ml`;
+  document.getElementById('waterBarFill').style.width = pct + '%';
 }
 
 function toggleHabit(id){
@@ -605,6 +660,7 @@ async function loadData(){
     if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
     if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
     if(!DATA.todos) DATA.todos = [];
+    if(!DATA.water) DATA.water = { date:"", ml:0 };
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -638,7 +694,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderHabits(); renderGamification(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
+function renderAll(){ renderHabits(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
