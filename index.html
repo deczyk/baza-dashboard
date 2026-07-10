@@ -297,7 +297,7 @@
   </div>
 
   <div class="launcher-label">◆ Start tutaj</div>
-  <div class="launcher" style="grid-template-columns:repeat(4,1fr)">
+  <div class="launcher" style="grid-template-columns:repeat(3,1fr)">
     <a class="launch-tile tile-drive" href="https://drive.google.com/drive/folders/18nLqq6sm6Vs5KomdBZFv2Z36UJAu7zM6?usp=sharing" target="_blank" rel="noopener">
       <div class="glyph">📁</div>
       <div class="lbl">Drive</div>
@@ -312,6 +312,16 @@
       <div class="glyph">✨</div>
       <div class="lbl">Claude</div>
       <div class="sub">Chat / appka</div>
+    </a>
+    <a class="launch-tile" href="https://web.whatsapp.com" target="_blank" rel="noopener">
+      <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">💬</div>
+      <div class="lbl">WhatsApp</div>
+      <div class="sub">Web</div>
+    </a>
+    <a class="launch-tile" href="https://www.messenger.com" target="_blank" rel="noopener">
+      <div class="glyph" style="background:rgba(74,122,140,0.16);color:#4A7A8C">💬</div>
+      <div class="lbl">Messenger</div>
+      <div class="sub">Web</div>
     </a>
     <a class="launch-tile" href="http://localhost:5600" target="_blank" rel="noopener" style="border-color:var(--line)">
       <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">⏱️</div>
@@ -529,25 +539,48 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 /* ---------- Nawyki ---------- */
 const HABITS = [
+  // RANO
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
   { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu' },
-  { id:'h3', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
-  { id:'h4', period:'Rano', text:'Mycie twarzy + zębów' },
-  { id:'h5', period:'Rano', text:'Rozciąganie klatki/pleców (2 min)', guide:'poradnik-rozciaganie.html' },
+  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów' },
+  { id:'h4', period:'Rano', text:'Zasłanie łóżka' },
+  { id:'h5', period:'Rano', text:'Otworzenie okna / świeże powietrze (1-2 min)' },
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
-  { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
-  { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
-  { id:'h14', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6] },
-  { id:'h15', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)' },
-  { id:'h16', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
-  { id:'h17', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
-  { id:'h18', period:'Wieczór', text:'15-20 min czytania / nauki' },
-  { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
-  { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
-  { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
-  { id:'h13', period:'Wieczór', text:'5 min ciszy + krótki przegląd dnia (3 zdania)' },
+  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html' },
+  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie' },
+  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy' },
+  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
+  // DZIEŃ
+  { id:'h11', period:'Dzień', text:'Wypij wodę do południa' },
+  { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
+  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)' },
+  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna' },
+  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
+  { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu' },
+  { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców' },
+  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6] },
+  { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
+  { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku' },
+  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia' },
+  // WIECZÓR
+  { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki' },
+  { id:'h23', period:'Wieczór', text:'Mycie twarzy + zębów' },
+  { id:'h24', period:'Wieczór', text:'Blok bez telefonu przed snem' },
+  { id:'h25', period:'Wieczór', text:'Rozciąganie spokojne (3-5 min)' },
+  { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro' },
+  { id:'h27', period:'Wieczór', text:'Krótki przegląd dnia: 3 zdania' },
+  { id:'h28', period:'Wieczór', text:'1 rzecz, z której jesteś zadowolony' },
+  { id:'h29', period:'Wieczór', text:'Stała pora snu (22:00)' },
+  { id:'h30', period:'Wieczór', text:'Zgaś mocne światła 30 min przed snem' },
+  { id:'h31', period:'Wieczór', text:'5 min ciszy / oddechu przed snem' },
+  // SPORT
+  { id:'h32', period:'Sport', text:'1 krótki spacer dziennie' },
+  { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank' },
+  { id:'h34', period:'Sport', text:'1 dzień bez długiego siedzenia bez przerw' },
+  { id:'h35', period:'Sport', text:'Notatka o energii: jak się czułeś po ruchu' },
+  { id:'h36', period:'Sport', text:'1 mały cel tygodniowy (np. 3 treningi, 5 spacerów)' },
 ];
-const PERIODS = ['Rano', 'Dzień', 'Wieczór'];
+const PERIODS = ['Rano', 'Dzień', 'Wieczór', 'Sport'];
 
 function getTodayHabits(){
   const dow = new Date().getDay(); // 0=Nd,1=Pon,...6=Sob
