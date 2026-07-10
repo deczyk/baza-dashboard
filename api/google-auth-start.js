@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar',
     access_type: 'offline',
     prompt: 'consent'
   });
