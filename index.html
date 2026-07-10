@@ -169,6 +169,13 @@
   .cal-event:last-child{ border-bottom:none; }
   .cal-event .ce-date{ color:var(--sage); font-family:var(--font-mono); font-size:10.5px; }
 
+  /* ---------- ActivityWatch ---------- */
+  .aw-box{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+  .aw-total{ font-size:22px; font-weight:700; color:var(--sage); margin:6px 0; }
+  .aw-app-row{ display:flex; justify-content:space-between; padding:5px 0; font-size:12.5px; border-bottom:1px solid var(--line); }
+  .aw-app-row:last-child{ border-bottom:none; }
+  .aw-app-row .aw-time{ color:var(--text-muted); font-family:var(--font-mono); font-size:11px; }
+
   /* ---------- Licznik wody ---------- */
   .water-box{
     background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px;
@@ -381,6 +388,13 @@
         <button class="water-btn" onclick="addCalendarEvent()" style="width:100%">+ Dodaj do kalendarza</button>
       </div>
     </div>
+
+    <div class="aw-box" id="awBox">
+      <div class="water-top">
+        <span class="water-label">⏱️ Aktywność (ten PC)</span>
+      </div>
+      <div id="awContent">Ładowanie…</div>
+    </div>
     <div id="habitsProgress" class="habits-progress"></div>
     <div class="heatmap-box">
       <div class="heatmap-label">◆ Ostatnie 12 tygodni</div>
@@ -453,6 +467,7 @@ function boot(){
   loadWeather();
   renderCountdown();
   loadCalendar();
+  loadActivityWatch();
   document.getElementById('priorityInput').addEventListener('input', e=>{
     clearTimeout(priorityTimer);
     priorityTimer = setTimeout(()=>savePriority(e.target.value), 500);
@@ -595,6 +610,48 @@ function addWater(amount){
   DATA.water.ml = Math.max(0, DATA.water.ml + amount);
   renderWater();
   queueSave();
+}
+async function loadActivityWatch(){
+  const box = document.getElementById('awContent');
+  const AW = 'http://localhost:5600';
+  try{
+    const bucketsRes = await fetch(`${AW}/api/0/buckets/`);
+    const buckets = await bucketsRes.json();
+    const windowBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-window'));
+    const afkBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-afk'));
+
+    if(!windowBucketId || !afkBucketId){
+      box.innerHTML = '<div class="empty" style="padding:6px 0">ActivityWatch nie znaleziony na tym urządzeniu</div>';
+      return;
+    }
+
+    const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+    const params = `start=${startOfDay.toISOString()}&end=${new Date().toISOString()}`;
+
+    const afkRes = await fetch(`${AW}/api/0/buckets/${afkBucketId}/events?${params}&limit=-1`);
+    const afkEvents = await afkRes.json();
+    const activeSeconds = afkEvents.filter(e => e.data.status === 'not-afk').reduce((s,e)=>s+e.duration, 0);
+
+    const winRes = await fetch(`${AW}/api/0/buckets/${windowBucketId}/events?${params}&limit=-1`);
+    const winEvents = await winRes.json();
+    const appTotals = {};
+    winEvents.forEach(e => {
+      const app = e.data.app || 'Nieznane';
+      appTotals[app] = (appTotals[app] || 0) + e.duration;
+    });
+    const topApps = Object.entries(appTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    const h = Math.floor(activeSeconds/3600), m = Math.floor((activeSeconds%3600)/60);
+    let html = `<div class="aw-total">${h}h ${m}min</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">aktywności dziś</div>`;
+    html += topApps.map(([app,sec]) => {
+      const ah = Math.floor(sec/3600), am = Math.floor((sec%3600)/60);
+      const timeStr = ah > 0 ? `${ah}h ${am}m` : `${am}m`;
+      return `<div class="aw-app-row"><span>${escapeHtml(app)}</span><span class="aw-time">${timeStr}</span></div>`;
+    }).join('');
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = '<div class="empty" style="padding:6px 0">Niedostępne na tym urządzeniu</div>';
+  }
 }
 async function loadCalendar(){
   const box = document.getElementById('calContent');
