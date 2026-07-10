@@ -561,21 +561,21 @@ const HABITS = [
   { id:'h3', period:'Rano', text:'Mycie twarzy + zębów' },
   { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
   { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html' },
-  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie' },
+  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki' },
   { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
   { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy' },
   // DZIEŃ — kolejność: nawyki cykliczne przez cały dzień → okolice lunchu → trening/shake → koniec dnia pracy
   { id:'h11', period:'Dzień', text:'Wypij wodę do południa' },
   { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)' },
-  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)' },
-  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna' },
-  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
+  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)', guide:'poradnik-nawyki.html#20-20-20' },
+  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna', guide:'poradnik-nawyki.html#postawa' },
+  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)', guide:'poradnik-nawyki.html#izometria' },
   { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców' },
   { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu' },
   { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6] },
   { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6] },
   { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku' },
-  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia' },
+  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech' },
   // WIECZÓR — kolejność: przygotowania → odpoczynek → wyciszanie → higiena → sen
   { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro' },
   { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki' },
@@ -589,7 +589,7 @@ const HABITS = [
   { id:'h29', period:'Wieczór', text:'Stała pora snu (22:00)' },
   // SPORT — od aktywności do refleksji/celu
   { id:'h32', period:'Sport', text:'1 krótki spacer dziennie' },
-  { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank' },
+  { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank', guide:'poradnik-nawyki.html#plank' },
   { id:'h34', period:'Sport', text:'1 dzień bez długiego siedzenia bez przerw' },
   { id:'h35', period:'Sport', text:'Notatka o energii: jak się czułeś po ruchu' },
   { id:'h36', period:'Sport', text:'1 mały cel tygodniowy (np. 3 treningi, 5 spacerów)' },
@@ -1184,15 +1184,44 @@ function editTodo(id){
 function renderTodos(){
   const list = document.getElementById('todosList');
   if(!DATA.todos) DATA.todos = [];
-  if(DATA.todos.length===0){ list.innerHTML = '<div class="empty">Brak zadań</div>'; return; }
-  list.innerHTML = '';
-  DATA.todos.forEach(t=>{
-    const el = document.createElement('div');
-    el.className = 'habit-row' + (t.done ? ' done' : '');
-    el.onclick = () => toggleTodo(t.id);
-    el.innerHTML = `<input type="checkbox" ${t.done?'checked':''} onclick="event.stopPropagation(); toggleTodo(${t.id})"><span class="h-text">${escapeHtml(t.text)}</span><span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span><span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>`;
-    list.appendChild(el);
-  });
+  const active = DATA.todos.filter(t => !t.done);
+  const archived = DATA.todos.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Brak aktywnych zadań</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row" onclick="toggleTodo(${t.id})">
+        <input type="checkbox" onclick="event.stopPropagation(); toggleTodo(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span>
+        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleTodoArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Archiwum (${archived.length}) <span id="todoArchiveArrow">${DATA._todoArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div id="todoArchiveBox" style="display:${DATA._todoArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += archived.length === 0
+    ? '<div class="empty">Brak zrobionych zadań.</div>'
+    : archived.map(t => `
+      <div class="habit-row done" onclick="toggleTodo(${t.id})">
+        <input type="checkbox" checked onclick="event.stopPropagation(); toggleTodo(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+
+function toggleTodoArchive(){
+  DATA._todoArchiveOpen = !DATA._todoArchiveOpen;
+  renderTodos();
 }
 
 function showToast(msg){
