@@ -59,6 +59,31 @@
   .dot{ width:6px; height:6px; border-radius:50%; background:var(--sage); box-shadow:0 0 6px var(--sage); }
   .dot.off{ background:var(--danger); box-shadow:0 0 6px var(--danger); }
 
+  /* ---------- Gamifikacja (poziom / XP / streak) ---------- */
+  .gami-box{
+    background:linear-gradient(135deg, rgba(107,156,137,0.10), rgba(201,168,118,0.06));
+    border:1px solid var(--sage); border-radius:14px; padding:14px 16px; margin:16px 0;
+    display:flex; align-items:center; gap:14px;
+  }
+  .gami-level{
+    width:46px; height:46px; border-radius:50%; background:var(--surface-2); border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    font-family:var(--font-mono); font-weight:700; font-size:16px; color:var(--gold);
+  }
+  .gami-mid{ flex:1; }
+  .gami-toprow{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+  .gami-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; }
+  .gami-xp-text{ font-family:var(--font-mono); font-size:10px; color:var(--sage); }
+  .gami-bar{ height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden; }
+  .gami-bar-fill{ height:100%; background:linear-gradient(90deg, var(--sage), var(--gold)); border-radius:3px; transition:width .4s ease; }
+  .gami-streak{
+    display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;
+    font-family:var(--font-mono); padding-left:14px; border-left:1px solid var(--line);
+  }
+  .gami-streak .flame{ font-size:20px; }
+  .gami-streak .snum{ font-size:15px; font-weight:700; color:var(--text); }
+  .gami-streak .slbl{ font-size:8.5px; color:var(--text-muted); letter-spacing:.06em; text-transform:uppercase; }
+
   /* ---------- Launcher (hero) ---------- */
   .launcher-label{
     font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.15em; text-transform:uppercase;
@@ -94,6 +119,27 @@
     font-weight:600; outline:none; resize:none; min-height:30px; line-height:1.4; padding:0;
   }
   .priority-box textarea::placeholder{ color:var(--text-muted); font-weight:400; }
+
+  /* ---------- Nawyki ---------- */
+  .habits-progress{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;
+    font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.05em;
+  }
+  .habits-progress .bar{ flex:1; height:5px; background:var(--surface-2); border-radius:3px; margin:0 10px; overflow:hidden; }
+  .habits-progress .bar-fill{ height:100%; background:var(--sage); border-radius:3px; transition:width .3s ease; }
+  .habit-group-label{
+    font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:.15em; text-transform:uppercase;
+    margin:20px 2px 8px;
+  }
+  .habit-group-label:first-child{ margin-top:0; }
+  .habit-row{
+    display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:pointer; transition:opacity .15s;
+  }
+  .habit-row input[type="checkbox"]{ width:20px; height:20px; flex-shrink:0; cursor:pointer; accent-color:var(--sage); }
+  .habit-row .h-text{ font-size:13.5px; }
+  .habit-row.done{ opacity:.5; }
+  .habit-row.done .h-text{ text-decoration:line-through; color:var(--text-muted); }
 
   .launch-tile .glyph{
     width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
@@ -180,8 +226,24 @@
     <div class="readout"><span class="dot" id="syncDot"></span><span id="syncTxt">SYNC OK</span><span id="clock" style="margin-left:auto"></span></div>
   </header>
 
+  <div class="gami-box">
+    <div class="gami-level" id="gamiLevel">1</div>
+    <div class="gami-mid">
+      <div class="gami-toprow">
+        <span class="gami-label">Poziom</span>
+        <span class="gami-xp-text" id="gamiXpText">0 / 100 XP</span>
+      </div>
+      <div class="gami-bar"><div class="gami-bar-fill" id="gamiBarFill" style="width:0%"></div></div>
+    </div>
+    <div class="gami-streak">
+      <span class="flame">🔥</span>
+      <span class="snum" id="gamiStreak">0</span>
+      <span class="slbl">dni</span>
+    </div>
+  </div>
+
   <div class="launcher-label">◆ Start tutaj</div>
-  <div class="launcher">
+  <div class="launcher" style="grid-template-columns:repeat(2,1fr)">
     <a class="launch-tile tile-drive" href="https://drive.google.com/drive/folders/18nLqq6sm6Vs5KomdBZFv2Z36UJAu7zM6?usp=sharing" target="_blank" rel="noopener">
       <div class="glyph">📁</div>
       <div class="lbl">Drive</div>
@@ -191,11 +253,6 @@
       <div class="glyph">💼</div>
       <div class="lbl">Panel</div>
       <div class="sub">CRM</div>
-    </a>
-    <a class="launch-tile tile-tasks" href="https://ticktick.com/signin" target="_blank" rel="noopener">
-      <div class="glyph">✅</div>
-      <div class="lbl">Taski</div>
-      <div class="sub">TickTick</div>
     </a>
   </div>
 
@@ -224,11 +281,17 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-tab="links">Linki</div>
+    <div class="tab active" data-tab="habits">Nawyki</div>
+    <div class="tab" data-tab="links">Linki</div>
     <div class="tab" data-tab="notes">Schowek</div>
   </div>
 
-  <section class="panel active" id="panel-links">
+  <section class="panel active" id="panel-habits">
+    <div id="habitsProgress" class="habits-progress"></div>
+    <div id="habitsList"></div>
+  </section>
+
+  <section class="panel" id="panel-links">
     <div class="links-grid" id="linksGrid"></div>
   </section>
 
@@ -256,7 +319,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], priority: { text:"", date:"" } };
+let DATA = { links: [], notes: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, xp: 0, streak: { count:0, lastCompleteDate:"" } };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -349,6 +412,119 @@ function renderCountdown(){
 
 /* ---------- Priorytet dnia ---------- */
 function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- Nawyki ---------- */
+const HABITS = [
+  { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
+  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu' },
+  { id:'h3', period:'Rano', text:'Śniadanie + ew. kawa czarna' },
+  { id:'h4', period:'Rano', text:'Mycie twarzy + zębów' },
+  { id:'h5', period:'Rano', text:'Rozciąganie klatki/pleców (2 min)' },
+  { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)' },
+  { id:'h7', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)' },
+  { id:'h8', period:'Dzień', text:'Sprawdzenie postawy (barki w tył)' },
+  { id:'h9', period:'Dzień', text:'5 min ciszy/oddechu' },
+  { id:'h10', period:'Wieczór', text:'Mycie twarzy + zębów' },
+  { id:'h11', period:'Wieczór', text:'Blok bez telefonu przed snem' },
+  { id:'h12', period:'Wieczór', text:'Stała pora snu (22:00)' },
+  { id:'h13', period:'Wieczór', text:'Krótki przegląd dnia (3 zdania)' },
+];
+const PERIODS = ['Rano', 'Dzień', 'Wieczór'];
+
+function ensureHabitsToday(){
+  if(!DATA.habits) DATA.habits = { date:"", done:{} };
+  if(DATA.habits.date !== todayStr()){
+    DATA.habits = { date: todayStr(), done: {} };
+  }
+}
+
+function toggleHabit(id){
+  ensureHabitsToday();
+  const wasDone = !!DATA.habits.done[id];
+  DATA.habits.done[id] = !wasDone;
+
+  if(!wasDone){
+    DATA.xp = (DATA.xp || 0) + 10;
+  } else {
+    DATA.xp = Math.max(0, (DATA.xp || 0) - 10);
+  }
+
+  checkStreak();
+  renderHabits();
+  renderGamification();
+  queueSave();
+}
+
+function checkStreak(){
+  const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+  const today = todayStr();
+  if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
+
+  if(doneCount === HABITS.length){
+    if(DATA.streak.lastCompleteDate !== today){
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+      DATA.streak.count = (DATA.streak.lastCompleteDate === yesterday) ? DATA.streak.count + 1 : 1;
+      DATA.streak.lastCompleteDate = today;
+    }
+  } else if(DATA.streak.lastCompleteDate === today){
+    // cofnięto checkbox po ukończeniu dnia — cofamy dzisiejszy wpis streaka
+    DATA.streak.count = Math.max(0, DATA.streak.count - 1);
+    DATA.streak.lastCompleteDate = "";
+  }
+}
+
+function levelFromXp(xp){
+  const level = Math.floor(xp / 100) + 1;
+  const inLevel = xp % 100;
+  return { level, inLevel };
+}
+
+function renderGamification(){
+  const xp = DATA.xp || 0;
+  const { level, inLevel } = levelFromXp(xp);
+  document.getElementById('gamiLevel').textContent = level;
+  document.getElementById('gamiXpText').textContent = `${inLevel} / 100 XP`;
+  document.getElementById('gamiBarFill').style.width = inLevel + '%';
+
+  // jeśli minął dzień bez pełnego ukończenia — zeruj streak przy wejściu
+  const today = todayStr();
+  const last = DATA.streak?.lastCompleteDate || "";
+  if(last && last !== today){
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    if(last !== yesterday){
+      DATA.streak.count = 0;
+    }
+  }
+  document.getElementById('gamiStreak').textContent = DATA.streak?.count || 0;
+}
+
+function renderHabits(){
+  ensureHabitsToday();
+  const list = document.getElementById('habitsList');
+  const progressEl = document.getElementById('habitsProgress');
+  list.innerHTML = '';
+
+  const doneCount = HABITS.filter(h => DATA.habits.done[h.id]).length;
+  const pct = Math.round((doneCount / HABITS.length) * 100);
+  progressEl.innerHTML = `<span>${doneCount}/${HABITS.length}</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span>`;
+
+  PERIODS.forEach(period => {
+    const items = HABITS.filter(h => h.period === period);
+    const label = document.createElement('div');
+    label.className = 'habit-group-label';
+    label.textContent = '◆ ' + period;
+    list.appendChild(label);
+
+    items.forEach(h => {
+      const done = !!DATA.habits.done[h.id];
+      const row = document.createElement('div');
+      row.className = 'habit-row' + (done ? ' done' : '');
+      row.onclick = () => toggleHabit(h.id);
+      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}</span>`;
+      list.appendChild(row);
+    });
+  });
+}
 function loadPriority(){
   const input = document.getElementById('priorityInput');
   if(DATA.priority && DATA.priority.date === todayStr()){
@@ -388,8 +564,11 @@ async function loadData(){
     const res = await fetch(API);
     if(!res.ok) throw new Error('fetch failed');
     const json = await res.json();
-    DATA = json.record && (json.record.links || json.record.notes || json.record.priority) ? json.record : DATA;
+    DATA = json.record && (json.record.links || json.record.notes || json.record.priority || json.record.habits) ? json.record : DATA;
     if(!DATA.priority) DATA.priority = { text:"", date:"" };
+    if(!DATA.habits) DATA.habits = { date:"", done:{} };
+    if(typeof DATA.xp !== 'number') DATA.xp = 0;
+    if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -423,7 +602,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderLinks(); renderNotes(); loadPriority(); }
+function renderAll(){ renderHabits(); renderGamification(); renderLinks(); renderNotes(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
