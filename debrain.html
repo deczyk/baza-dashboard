@@ -168,6 +168,8 @@
     return bubble;
   }
 
+  const GREETING_PROMPT = "[Wejście do czatu — nowa sesja] Przywitaj się krótko, po swojemu. Następnie podaj jeden cytat motywacyjny (dowolny autor, po polsku lub z tłumaczeniem) oraz jedną naprawdę niszową, mało znaną ciekawostkę o świecie — coś, czego większość ludzi nie słyszała, nie oczywiste jak 'miód nie psuje się'. Bądź zwięzły, bez gwiazdek.";
+
   async function initChat(){
     try {
       const res = await fetch('/api/debrain-memory');
@@ -186,6 +188,12 @@
     } catch (e) {
       log.innerHTML = '<div class="empty">Twój agent. (Pamięć trwała niedostępna — sprawdź konfigurację.)</div>';
     }
+
+    // Powitanie: raz na sesję (kartę), nie przy każdym odświeżeniu w tej samej karcie
+    if (sessionStorage.getItem('debrain_greeted') !== '1') {
+      sessionStorage.setItem('debrain_greeted', '1');
+      await sendToDebrain(GREETING_PROMPT, { hideUserBubble: true });
+    }
   }
 
   function queueSaveMemory(){
@@ -199,20 +207,9 @@
     }, 400);
   }
 
-  input.addEventListener('input', () => {
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-  });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-
-    addMsg('user', text);
+  async function sendToDebrain(text, opts = {}){
+    if (!opts.hideUserBubble) addMsg('user', text);
     history.push({ role: 'user', content: text });
-    input.value = '';
-    input.style.height = 'auto';
     sendBtn.disabled = true;
     dot.classList.add('thinking');
 
@@ -235,6 +232,20 @@
       dot.classList.remove('thinking');
       log.scrollTop = log.scrollHeight;
     }
+  }
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+    await sendToDebrain(text);
   });
 
   input.addEventListener('keydown', (e) => {
