@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reset — narzędzie jednorazowe</title>
+<style>
+  body {
+    background: #14181B; color: #E8E4DB; font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px;
+  }
+  .box { max-width: 420px; text-align: center; }
+  input {
+    background: #1C2226; border: 1px solid #2E363C; color: #E8E4DB; font-family: inherit;
+    font-size: 20px; letter-spacing: .3em; text-align: center; padding: 14px 18px; border-radius: 8px;
+    width: 200px; outline: none; margin: 16px 0;
+  }
+  button {
+    display: block; width: 100%; background: #C9A876; border: none; border-radius: 8px; padding: 12px;
+    color: #14181B; font-weight: 700; font-family: inherit; font-size: 13px; letter-spacing: .05em;
+    text-transform: uppercase; cursor: pointer; margin-top: 10px;
+  }
+  #result { margin-top: 20px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+  .ok { color: #6B9C89; }
+  .err { color: #B4664F; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div>◆ RESET — narzędzie jednorazowe</div>
+  <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN">
+  <button onclick="doReset()">Wykonaj pełny reset</button>
+  <div id="result"></div>
+  <div style="margin-top:24px;font-size:10.5px;color:#848D93">
+    Resetuje: dzisiejsze odhaczenia nawyków, XP, poziom, streak.<br>
+    NIE rusza: zadań, notatek, zakupów, linków, priorytetu, kalorii, wody.<br><br>
+    Po użyciu skasuj ten plik z repo.
+  </div>
+</div>
+
+<script>
+async function doReset(){
+  const pin = document.getElementById('pin').value;
+  const result = document.getElementById('result');
+  result.textContent = 'Pracuję…';
+  result.className = '';
+
+  try {
+    const getRes = await fetch('/api/baza-data', { headers: { 'X-Panel-Password': pin } });
+    if (!getRes.ok) throw new Error('Zły PIN albo błąd serwera (status ' + getRes.status + ')');
+    const json = await getRes.json();
+    const data = json.record;
+
+    if (!data.habits) data.habits = { date: "", done: {} };
+    data.habits.done = {};
+    data.habits.failed = {};
+    data.xp = 0;
+    data.streak = { count: 0, lastCompleteDate: "" };
+
+    const putRes = await fetch('/api/baza-data', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Panel-Password': pin },
+      body: JSON.stringify(data),
+    });
+    if (!putRes.ok) throw new Error('Zapis nie powiódł się (status ' + putRes.status + ')');
+
+    result.textContent = 'Gotowe. Odhaczenia, XP, poziom i streak wyzerowane.\nZadania/notatki/zakupy nietknięte.\nOtwórz Bazę żeby zobaczyć efekt.';
+    result.className = 'ok';
+  } catch (e) {
+    result.textContent = 'Błąd: ' + e.message;
+    result.className = 'err';
+  }
+}
+
+document.getElementById('pin').addEventListener('keydown', e => { if (e.key === 'Enter') doReset(); });
+</script>
+</body>
+</html>
