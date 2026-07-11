@@ -2,10 +2,8 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Debrain</title>
-<meta name="theme-color" content="#14181B">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -15,55 +13,31 @@
     --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
     --font-sans:'Inter', -apple-system, system-ui, sans-serif;
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); overflow: hidden; }
-  body { -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+  body { -webkit-font-smoothing: antialiased; }
 
-  /* ---------- Gate ---------- */
-  #gate {
-    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 18px; z-index: 100;
-  }
-  #gate .mark { font-family: var(--font-mono); color: var(--sage); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; }
-  #gate input {
-    background: var(--surface); border: 1px solid var(--line); color: var(--text);
-    font-family: var(--font-mono); font-size: 20px; letter-spacing: .3em; text-align: center;
-    padding: 14px 18px; border-radius: 8px; width: 200px; outline: none;
-  }
-  #gate input:focus { border-color: var(--sage); }
-  #gate .err { color: var(--danger); font-size: 12px; font-family: var(--font-mono); height: 14px; }
-  #gate button {
-    background: var(--sage); color: #14181B; border: none; border-radius: 8px; padding: 12px 22px;
-    font-family: var(--font-mono); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 12px;
-    cursor: pointer;
-  }
-
-  /* ---------- App ---------- */
-  #app { display: none; height: 100vh; }
-  #app.visible { display: flex; }
+  .app { display: flex; height: 100vh; }
 
   /* ---------- Sidebar ---------- */
   .sidebar {
-    width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line);
+    width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line);
     display: flex; flex-direction: column; overflow: hidden;
   }
   .sidebar-top { padding: 14px 12px 10px; border-bottom: 1px solid var(--line); }
-  .sidebar-brand { font-size: 16px; font-weight: 700; margin-bottom: 4px; padding: 0 4px; }
-  .sidebar-tagline { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; padding: 0 4px; margin-bottom: 10px; }
+  .sidebar-brand { font-size: 16px; font-weight: 700; margin-bottom: 10px; padding: 0 4px; }
   .sidebar-btn {
     width: 100%; background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
-    font-family: var(--font-sans); font-size: 12px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    font-family: var(--font-sans); font-size: 12.5px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
     text-align: left; margin-bottom: 6px;
   }
   .sidebar-btn:hover { border-color: var(--gold); }
   .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
-  .back-link { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); text-decoration: none; padding: 10px 12px 0; }
-  .back-link:hover { color: var(--gold); }
 
   .folder { margin-bottom: 4px; }
   .folder-head {
     display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; cursor: pointer;
-    font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-family: var(--font-mono);
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-family: var(--font-mono);
   }
   .folder-head:hover { background: var(--surface-2); }
   .folder-head .arrow { transition: transform .15s; font-size: 9px; }
@@ -77,7 +51,7 @@
 
   .chat-item {
     display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; cursor: pointer;
-    font-size: 12px; color: var(--text-muted); margin-bottom: 1px;
+    font-size: 12.5px; color: var(--text-muted); margin-bottom: 1px;
   }
   .chat-item:hover { background: var(--surface-2); color: var(--text); }
   .chat-item.active { background: var(--surface-2); color: var(--gold); }
@@ -90,17 +64,21 @@
   /* ---------- Main ---------- */
   .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   header {
-    padding: 14px 18px; border-bottom: 1px solid var(--line);
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   }
-  .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-  .brand-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); box-shadow: 0 0 6px var(--sage); animation: pulse 2.6s infinite; flex-shrink: 0; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-name { font-size: 16px; font-weight: 600; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); box-shadow: 0 0 6px var(--sage); animation: pulse 2.6s infinite; }
   .dot.thinking { animation: pulse 0.8s infinite; }
   @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(107,156,137,.5)} 70%{box-shadow:0 0 0 9px rgba(107,156,137,0)} 100%{box-shadow:0 0 0 0 rgba(107,156,137,0)} }
-  .tag { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; }
+  .tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .badge-local {
+    font-family: var(--font-mono); font-size: 10px; color: var(--sage); border: 1px solid var(--sage);
+    padding: 3px 8px; border-radius: 20px; letter-spacing: .06em; text-transform: uppercase;
+  }
 
-  main { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
   .msg { display: flex; flex-direction: column; gap: 5px; max-width: 88%; }
   .msg.user { align-self: flex-end; align-items: flex-end; }
   .msg.assistant { align-self: flex-start; }
@@ -120,19 +98,12 @@
   .tool-step .spin { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: pulse 1s infinite; flex-shrink: 0; }
   .tool-step.done .spin { background: var(--sage); animation: none; }
 
-  footer { padding: 12px 18px 16px; border-top: 1px solid var(--line); flex-shrink: 0; }
+  footer { padding: 14px 20px 20px; border-top: 1px solid var(--line); flex-shrink: 0; }
   form { display: flex; gap: 10px; }
-  button.attach {
-    background: var(--surface); border: 1px solid var(--line); color: var(--text-muted);
-    width: 46px; height: 46px; border-radius: 10px; font-size: 18px; cursor: pointer; flex-shrink: 0;
-  }
-  button.attach:hover { border-color: var(--sage); color: var(--sage); }
-  button.attach:disabled { opacity: .5; cursor: default; }
-  .ocr-status { font-family: var(--font-mono); font-size: 11px; color: var(--sage); margin-top: 8px; text-align: center; }
   textarea {
     flex: 1; resize: none; background: var(--surface); border: 1px solid var(--line); color: var(--text);
     font-family: var(--font-sans); font-size: 14px; padding: 12px 14px; border-radius: 10px; outline: none;
-    min-height: 46px; max-height: 140px;
+    min-height: 46px; max-height: 160px;
   }
   textarea:focus { border-color: var(--gold); }
   button.send {
@@ -146,85 +117,38 @@
   .empty { color: var(--text-muted); font-size: 13px; margin-top: 30px; line-height: 1.7; font-family: var(--font-mono); text-align: center; }
   ::-webkit-scrollbar { width: 7px; }
   ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-
-  @media (max-width: 640px) {
-    .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 50; transform: translateX(-100%); transition: transform .2s; }
-    .sidebar.open { transform: translateX(0); }
-    .menu-btn { display: inline-flex !important; }
-  }
-  .menu-btn { display: none; background: none; border: none; color: var(--text); font-size: 18px; cursor: pointer; margin-right: 4px; }
 </style>
 </head>
 <body>
-
-<div id="gate">
-  <div class="mark">◆ DEBRAIN — DOSTĘP</div>
-  <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
-  <div class="err" id="gateErr"></div>
-  <button onclick="tryUnlock()">Odblokuj</button>
-</div>
-
-<div id="app">
-  <aside class="sidebar" id="sidebar">
-    <a class="back-link" href="index.html">◆ Baza</a>
+<div class="app">
+  <aside class="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-brand">Debrain</div>
-      <div class="sidebar-tagline">drugi mózg decza</div>
       <button class="sidebar-btn" id="newChatBtn">+ Nowa rozmowa</button>
       <button class="sidebar-btn" id="newFolderBtn">+ Nowy folder</button>
+      <a class="sidebar-btn" href="/vault-graph.html" style="display:block;text-decoration:none;text-align:left">🕸️ Graf skarbca</a>
     </div>
     <div class="sidebar-list" id="sidebarList"></div>
   </aside>
 
   <div class="main">
     <header>
-      <div class="brand">
-        <button class="menu-btn" id="menuBtn">☰</button>
-        <span class="dot" id="statusDot"></span>
-        <span class="brand-name" id="chatTitle">Debrain</span>
-      </div>
-      <span class="tag" id="modelTag">deepseek-chat</span>
+      <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name" id="chatTitle">Debrain</span><span class="tag">drugi mózg decza</span><span class="tag" id="modelTag">deepseek-chat</span></div>
+      <span class="badge-local">lokalnie · pisze kod</span>
     </header>
     <main id="chatLog">
       <div class="empty">Ładowanie…</div>
     </main>
     <footer>
       <form id="chatForm">
-        <button type="button" class="attach" id="attachBtn" title="Załącz zrzut ekranu (OCR)">📎</button>
-        <input type="file" id="imageInput" accept="image/*" style="display:none">
         <textarea id="input" placeholder="Zapytaj Debrain… (/reasoner, /chat)" rows="1"></textarea>
         <button type="submit" class="send" id="sendBtn">Wyślij</button>
       </form>
-      <div id="ocrStatus" class="ocr-status" style="display:none"></div>
     </footer>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-  const DEBRAIN_PIN = "5855";
-
-  function tryUnlock(){
-    const val = document.getElementById('pinInput').value;
-    if(val === DEBRAIN_PIN){
-      sessionStorage.setItem('debrain_unlocked','1');
-      document.getElementById('gate').style.display='none';
-      document.getElementById('app').classList.add('visible');
-      init();
-    } else {
-      document.getElementById('gateErr').textContent = 'Zły PIN';
-      document.getElementById('pinInput').value='';
-    }
-  }
-  document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
-
-  if(sessionStorage.getItem('debrain_unlocked')==='1'){
-    document.getElementById('gate').style.display='none';
-    document.getElementById('app').classList.add('visible');
-    window.addEventListener('DOMContentLoaded', init);
-  }
-
-  // ---------- Stan ----------
   const log = document.getElementById('chatLog');
   const form = document.getElementById('chatForm');
   const input = document.getElementById('input');
@@ -235,11 +159,6 @@
   const sidebarList = document.getElementById('sidebarList');
   const newChatBtn = document.getElementById('newChatBtn');
   const newFolderBtn = document.getElementById('newFolderBtn');
-  const attachBtn = document.getElementById('attachBtn');
-  const imageInput = document.getElementById('imageInput');
-  const ocrStatus = document.getElementById('ocrStatus');
-  const sidebar = document.getElementById('sidebar');
-  const menuBtn = document.getElementById('menuBtn');
 
   let history = [];
   let firstMessage = true;
@@ -248,10 +167,6 @@
   let folders = [];
   let chats = [];
   const collapsedFolders = new Set();
-
-  menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
-
-  function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
@@ -277,15 +192,14 @@
     read_calendar: 'sprawdzam kalendarz',
     create_calendar_event: 'dodaję do kalendarza',
     read_crm_data: 'czytam dane z CRM',
-    search_vault: 'przeszukuję skarbiec',
-    read_vault_note: 'czytam notatkę',
-    write_vault_note: 'zapisuję notatkę',
-    list_vault_notes: 'listuję notatki',
+    run_python: 'uruchamiam kod Python',
+    run_shell: 'uruchamiam komendę',
+    write_file: 'zapisuję plik',
+    read_file: 'czytam plik',
+    list_files: 'listuję pliki',
+    read_image_text: 'czytam tekst ze zrzutu (OCR)',
+    search_vault: 'przeszukuję skarbiec notatek',
     sync_baza_notes_to_vault: 'synchronizuję notatki z Bazy',
-    list_memory: 'sprawdzam zapisane lekcje',
-    read_memory: 'czytam lekcję',
-    write_memory: 'zapisuję lekcję',
-    delete_memory: 'usuwam nieaktualną lekcję',
   };
 
   function addAssistantWithSteps() {
@@ -326,16 +240,9 @@
     }
   }
 
-  async function memAction(action, payload){
-    const res = await fetch('/api/debrain-memory', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload }),
-    });
-    return res.json();
-  }
-
   function renderSidebar() {
     sidebarList.innerHTML = '';
+
     const chatItemEl = (c) => {
       const el = document.createElement('div');
       el.className = 'chat-item' + (c.id === activeChatId ? ' active' : '');
@@ -345,7 +252,10 @@
           <span data-act="move" title="Przenieś do folderu">📁</span>
           <span data-act="delete" title="Usuń">✕</span>
         </span>`;
-      el.addEventListener('click', (e) => { if (!e.target.dataset.act) loadChat(c.id); });
+      el.addEventListener('click', (e) => {
+        if (e.target.dataset.act) return;
+        loadChat(c.id);
+      });
       el.querySelector('[data-act="rename"]').addEventListener('click', (e) => { e.stopPropagation(); renameChat(c.id, c.title); });
       el.querySelector('[data-act="move"]').addEventListener('click', (e) => { e.stopPropagation(); moveChat(c.id); });
       el.querySelector('[data-act="delete"]').addEventListener('click', (e) => { e.stopPropagation(); deleteChat(c.id); });
@@ -360,7 +270,8 @@
       head.className = 'folder-head' + (collapsed ? ' collapsed' : '');
       head.innerHTML = `<span class="arrow">▾</span><span>${escapeHtml(f.name)}</span>
         <span class="folder-actions">
-          <span data-act="rename">✎</span><span data-act="delete">✕</span>
+          <span data-act="rename" title="Zmień nazwę">✎</span>
+          <span data-act="delete" title="Usuń folder">✕</span>
         </span>`;
       head.addEventListener('click', (e) => {
         if (e.target.dataset.act) return;
@@ -381,23 +292,31 @@
     chats.filter(c => !c.folderId).forEach(c => sidebarList.appendChild(chatItemEl(c)));
   }
 
-  async function refreshState(){
-    const res = await fetch('/api/debrain-memory');
+  function escapeHtml(s) {
+    const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+
+  async function refreshState() {
+    const res = await fetch('/api/state');
     const data = await res.json();
     folders = data.folders || [];
-    chats = data.chats || [];
+    chats = (data.chats || []).map(c => ({ id: c.id, title: c.title, folderId: c.folder_id, updated: c.updated }));
+    currentModel = data.model || 'deepseek-chat';
+    modelTag.textContent = currentModel;
     renderSidebar();
     return data.activeChatId;
   }
 
-  async function loadChat(chatId){
+  async function loadChat(chatId) {
     if (!chatId) return;
     activeChatId = chatId;
-    sidebar.classList.remove('open');
-    await memAction('setActive', { chatId });
-    const data = await memAction('getChat', { chatId });
+    await fetch('/api/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId }) });
+
+    const res = await fetch('/api/chats/' + chatId);
+    const data = await res.json();
     history = data.history || [];
     chatTitleEl.textContent = data.title || 'Debrain';
+
     firstMessage = true;
     if (history.length === 0) {
       log.innerHTML = '<div class="empty">Nowa rozmowa. Napisz coś, żeby zacząć.</div>';
@@ -408,34 +327,46 @@
     renderSidebar();
   }
 
-  async function createNewChat(folderId){
-    const data = await memAction('createChat', { folderId: folderId || null });
+  async function createNewChat(folderId) {
+    const res = await fetch('/api/chats', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId: folderId || null }),
+    });
+    const data = await res.json();
     await refreshState();
     await loadChat(data.id);
   }
 
-  async function renameChat(chatId, currentTitle){
+  async function renameChat(chatId, currentTitle) {
     const title = prompt('Nowa nazwa rozmowy:', currentTitle);
     if (title === null || !title.trim()) return;
-    await memAction('renameChat', { chatId, title: title.trim() });
+    await fetch('/api/chats/' + chatId + '/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim() }),
+    });
     if (chatId === activeChatId) chatTitleEl.textContent = title.trim();
     await refreshState();
   }
 
-  async function moveChat(chatId){
-    if (folders.length === 0) { alert('Nie masz jeszcze żadnego folderu. Utwórz go przyciskiem "+ Nowy folder".'); return; }
-    const names = folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
-    const choice = prompt('Do którego folderu przenieść? (numer, 0 = bez folderu)\n' + names);
+  async function moveChat(chatId) {
+    if (folders.length === 0) {
+      alert('Nie masz jeszcze żadnego folderu. Utwórz go przyciskiem "+ Nowy folder".');
+      return;
+    }
+    const names = folders.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
+    const choice = prompt('Do którego folderu przenieść? (numer, albo 0 = bez folderu)\n' + names);
     if (choice === null) return;
     const idx = parseInt(choice, 10);
-    const folderId = idx === 0 || isNaN(idx) ? null : (folders[idx-1] ? folders[idx-1].id : null);
-    await memAction('moveChat', { chatId, folderId });
+    const folderId = idx === 0 || isNaN(idx) ? null : (folders[idx - 1] ? folders[idx - 1].id : null);
+    await fetch('/api/chats/' + chatId + '/move', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folderId }),
+    });
     await refreshState();
   }
 
-  async function deleteChat(chatId){
-    if (!confirm('Usunąć tę rozmowę?')) return;
-    const data = await memAction('deleteChat', { chatId });
+  async function deleteChat(chatId) {
+    if (!confirm('Usunąć tę rozmowę? Tego nie da się cofnąć.')) return;
+    const res = await fetch('/api/chats/' + chatId, { method: 'DELETE' });
+    const data = await res.json();
     await refreshState();
     if (chatId === activeChatId) {
       if (data.activeChatId) await loadChat(data.activeChatId);
@@ -443,36 +374,42 @@
     }
   }
 
-  async function createNewFolder(){
+  async function createNewFolder() {
     const name = prompt('Nazwa nowego folderu:');
     if (!name || !name.trim()) return;
-    await memAction('createFolder', { name: name.trim() });
+    await fetch('/api/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }),
+    });
     await refreshState();
   }
 
-  async function renameFolder(folderId, currentName){
+  async function renameFolder(folderId, currentName) {
     const name = prompt('Nowa nazwa folderu:', currentName);
     if (name === null || !name.trim()) return;
-    await memAction('renameFolder', { folderId, name: name.trim() });
+    await fetch('/api/folders/' + folderId + '/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }),
+    });
     await refreshState();
   }
 
-  async function deleteFolder(folderId){
+  async function deleteFolder(folderId) {
     if (!confirm('Usunąć folder? Rozmowy w środku zostaną, wrócą do listy głównej.')) return;
-    await memAction('deleteFolder', { folderId });
+    await fetch('/api/folders/' + folderId, { method: 'DELETE' });
     await refreshState();
   }
 
-  async function sendToDebrain(text, opts = {}){
-    if (!opts.hideUserBubble) addMsg('user', text);
+  async function sendToDebrain(text) {
+    addMsg('user', text);
     history.push({ role: 'user', content: text });
     sendBtn.disabled = true;
     dot.classList.add('thinking');
+
     const { bubble: thinkingBubble, stepsWrap } = addAssistantWithSteps();
 
     try {
       const res = await fetch('/api/chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatId: activeChatId, history, model: currentModel }),
       });
 
@@ -499,22 +436,18 @@
             } else if (event.type === 'tool_end') {
               finishToolStep(stepsWrap, event.name);
             } else if (event.type === 'final') {
-              if (event.error) { thinkingBubble.textContent = 'Błąd: ' + event.error; }
-              else {
-                thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
-                history = event.history || history;
-                if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
-              }
+              thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
+              history = event.history || history;
+              if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
+            } else if (event.error) {
+              thinkingBubble.textContent = 'Błąd: ' + event.error;
             }
           }
         }
       }
-
-      const meta = chats.find(c => c.id === activeChatId);
       await refreshState();
-      if (meta) chatTitleEl.textContent = (chats.find(c => c.id === activeChatId) || {}).title || chatTitleEl.textContent;
     } catch (err) {
-      thinkingBubble.textContent = 'Błąd połączenia: ' + err.message;
+      thinkingBubble.textContent = 'Błąd połączenia z lokalnym serwerem: ' + err.message;
     } finally {
       sendBtn.disabled = false;
       dot.classList.remove('thinking');
@@ -524,77 +457,73 @@
 
   input.addEventListener('input', () => {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
   });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = input.value.trim();
     if (!text) return;
-    input.value = ''; input.style.height = 'auto';
+    input.value = '';
+    input.style.height = 'auto';
 
     if (text === '/reasoner') {
-      currentModel = 'deepseek-reasoner'; modelTag.textContent = currentModel;
+      currentModel = 'deepseek-reasoner';
+      modelTag.textContent = 'deepseek-reasoner';
       addMsg('assistant', 'Przełączono na deepseek-reasoner — wolniejszy, ale mocniejszy w wieloetapowym rozumowaniu.');
       return;
     }
     if (text === '/chat') {
-      currentModel = 'deepseek-chat'; modelTag.textContent = currentModel;
+      currentModel = 'deepseek-chat';
+      modelTag.textContent = 'deepseek-chat';
       addMsg('assistant', 'Przełączono z powrotem na deepseek-chat.');
       return;
     }
+
     await sendToDebrain(text);
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
   });
 
   newChatBtn.addEventListener('click', () => createNewChat(null));
   newFolderBtn.addEventListener('click', createNewFolder);
 
-  // ---------- OCR ----------
-  attachBtn.addEventListener('click', () => imageInput.click());
-  imageInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    attachBtn.disabled = true;
-    ocrStatus.style.display = 'block';
-    ocrStatus.textContent = 'Czytam tekst ze zrzutu ekranu…';
+  async function init() {
     try {
-      const worker = await Tesseract.createWorker('pol+eng');
-      const { data: { text } } = await worker.recognize(file);
-      await worker.terminate();
-      const extracted = (text || '').trim();
-      ocrStatus.style.display = 'none';
-      imageInput.value = '';
-      if (!extracted) { addMsg('assistant', 'Nie udało się odczytać żadnego tekstu z tego obrazu.'); return; }
-      const prompt2 = `[Odczytano tekst ze zrzutu ekranu przez OCR]\n\n${extracted}\n\nPrzeanalizuj powyższe.`;
-      await sendToDebrain(prompt2, { hideUserBubble: false });
+      const activeId = await refreshState();
+      if (activeId) {
+        await loadChat(activeId);
+      } else if (chats.length > 0) {
+        await loadChat(chats[0].id);
+      } else {
+        await createNewChat(null);
+      }
+
+      if (!activeChatId) {
+        log.innerHTML = '<div class="empty">Nie udało się utworzyć rozmowy. Sprawdź konsolę (F12) i czy lokalny serwer działa poprawnie.</div>';
+        return;
+      }
+
+      const greetRes = await fetch('/api/greeting', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: activeChatId }),
+      });
+      const greetData = await greetRes.json();
+      if (!greetData.skip) {
+        addMsg('assistant', greetData.reply);
+        history = greetData.history;
+        await refreshState();
+      }
     } catch (err) {
-      ocrStatus.style.display = 'none';
-      addMsg('assistant', 'Błąd OCR: ' + err.message);
-    } finally {
-      attachBtn.disabled = false;
-    }
-  });
-
-  // ---------- Start ----------
-  async function init(){
-    const activeId = await refreshState();
-    if (activeId) await loadChat(activeId);
-    else if (chats.length > 0) await loadChat(chats[0].id);
-    else await createNewChat(null);
-
-    // Powitanie raz dziennie
-    const status = await memAction('getGreetingStatus', {});
-    const today = new Date().toISOString().slice(0, 10);
-    if (status.lastGreetingDate !== today) {
-      const GREETING = "[Nowy dzień] Przywitaj się krótko, po swojemu. Następnie podaj jeden cytat motywacyjny (dowolny autor) oraz jedną naprawdę niszową, mało znaną ciekawostkę o świecie — coś, czego większość ludzi nie słyszała. Bądź zwięzły, bez gwiazdek.";
-      await sendToDebrain(GREETING, { hideUserBubble: true });
-      await memAction('setGreetingDate', { date: today });
+      log.innerHTML = '<div class="empty">Błąd startu: ' + err.message + '<br>Sprawdź konsolę (F12) i czy lokalny serwer działa.</div>';
     }
   }
+
+  init();
 </script>
 </body>
 </html>

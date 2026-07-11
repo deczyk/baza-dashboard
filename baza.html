@@ -670,19 +670,15 @@ const HABITS = [
   { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy', time:'8:00' },
   // DZIEŃ
   { id:'h11', period:'Dzień', text:'Wypij wodę do południa', time:'do 12:00' },
-  { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)', time:'co godzinę' },
-  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)', guide:'poradnik-nawyki.html#20-20-20', time:'co 20 min' },
   { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna', guide:'poradnik-nawyki.html#postawa', time:'na bieżąco' },
   { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)', guide:'poradnik-nawyki.html#izometria', time:'~15:00' },
   { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców', time:'13:00' },
-  { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu', time:'13:15' },
   { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6], time:'18:00' },
   { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6], time:'18:30' },
   { id:'h37', period:'Dzień', text:'Dawka leku (medyczna marihuana)', time:'18:30' },
   { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku', time:'17:30' },
   { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech', time:'~15:30' },
   { id:'h42', period:'Dzień', text:'Zero cukru dzisiaj (wyzwanie: miesiąc bez cukru)', time:'cały dzień' },
-  { id:'h43', period:'Dzień', text:'3 minuty medytacji', time:'~16:00' },
   // WIECZÓR — telefon offline 22:00, sen 23:00
   { id:'h39', period:'Wieczór', text:'Czytanie książki (1h)', time:'19:00' },
   { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro', time:'21:00' },
@@ -699,8 +695,6 @@ const HABITS = [
   // SPORT
   { id:'h32', period:'Sport', text:'1 krótki spacer dziennie' },
   { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank', guide:'poradnik-nawyki.html#plank' },
-  { id:'h34', period:'Sport', text:'1 dzień bez długiego siedzenia bez przerw' },
-  { id:'h35', period:'Sport', text:'Notatka o energii: jak się czułeś po ruchu' },
   { id:'h36', period:'Sport', text:'1 mały cel tygodniowy (np. 3 treningi, 5 spacerów)' },
 ];
 const PERIODS = ['Rano', 'Dzień', 'Wieczór', 'Sport'];
@@ -1436,6 +1430,14 @@ function editTodo(id){
   t.text = updated.trim();
   renderTodos(); queueSave();
 }
+function editTodoNote(id){
+  const t = DATA.todos.find(t=>t.id===id);
+  if(!t) return;
+  const updated = prompt('Notatka do zadania (np. "zrobię w poniedziałek", "odłożone, spróbuj jutro"):', t.note || '');
+  if(updated === null) return;
+  t.note = updated.trim();
+  renderTodos(); queueSave();
+}
 function renderTodos(){
   const list = document.getElementById('todosList');
   if(!DATA.todos) DATA.todos = [];
@@ -1449,9 +1451,13 @@ function renderTodos(){
     html += active.map(t => `
       <div class="habit-row" onclick="toggleTodo(${t.id})">
         <input type="checkbox" onclick="event.stopPropagation(); toggleTodo(${t.id})">
-        <span class="h-text">${escapeHtml(t.text)}</span>
-        <span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span>
-        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+          <span class="h-text">${escapeHtml(t.text)}</span>
+          ${t.note ? `<span style="font-family:var(--font-mono);font-size:10.5px;color:var(--gold);opacity:.85">🗓️ ${escapeHtml(t.note)}</span>` : ''}
+        </div>
+        <span onclick="event.stopPropagation(); editTodoNote(${t.id})" title="Notatka (np. kiedy to zrobisz)" style="color:${t.note ? 'var(--gold)' : 'var(--text-muted)'};cursor:pointer;opacity:${t.note ? '1' : '.6'};flex-shrink:0">🗓️</span>
+        <span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;flex-shrink:0">✎</span>
+        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:2px;flex-shrink:0">✕</span>
       </div>
     `).join('');
   }
