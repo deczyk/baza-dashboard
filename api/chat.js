@@ -574,7 +574,7 @@ module.exports = async (req, res) => {
   });
 
   try {
-    const { history, model: requestedModel, chatId } = req.body;
+    const { history, model: requestedModel, chatId, hidden } = req.body;
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let messages = [{ role: "system", content: SYSTEM_PROMPT }, ...(history || [])];
     let finalContent = null;
@@ -599,7 +599,13 @@ module.exports = async (req, res) => {
       }
     }
 
-    const updatedHistory = messages.filter((m) => m.role !== "system");
+    const rawHistory = messages.filter((m) => m.role !== "system");
+    // Jeśli to ukryte polecenie (np. codzienne powitanie) — zapisujemy do pamięci TYLKO czystą
+    // odpowiedź asystenta, bez samego triggera i bez śmieci narzędziowych, żeby po ponownym
+    // otwarciu czatu nie pojawiło się jako widoczna wiadomość "TY".
+    const updatedHistory = hidden
+      ? [...(history || []).slice(0, -1), { role: "assistant", content: finalContent }]
+      : rawHistory;
 
     // Zapis do wspólnego magazynu (ten sam bin, którego używa desktop przy włączonej synchronizacji)
     if (chatId) {
