@@ -96,6 +96,15 @@
   .missed-box ul{ margin:0; padding-left:18px; font-size:12.5px; color:var(--text); line-height:1.6; }
   .missed-box .mb-quote{ margin-top:8px; font-style:italic; color:var(--text-muted); font-size:12px; }
 
+  /* ---------- Ikigai ---------- */
+  .ikigai-box{ background:linear-gradient(135deg, rgba(201,168,118,0.10), rgba(107,156,137,0.06)); border:1px solid var(--gold); border-radius:14px; padding:18px 20px; margin-bottom:16px; }
+  .ikigai-q{ margin-bottom:14px; }
+  .ikigai-q:last-child{ margin-bottom:0; }
+  .ikigai-q label{ display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+  .ikigai-q textarea{ width:100%; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:9px 11px; color:var(--text); font-family:var(--font-sans); font-size:13px; resize:vertical; min-height:44px; box-sizing:border-box; }
+  .ikigai-save{ background:var(--gold); border:none; border-radius:8px; padding:9px 18px; color:#14181B; font-weight:700; font-size:12.5px; cursor:pointer; margin-top:6px; }
+  .ikigai-history{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); margin-top:10px; cursor:pointer; text-decoration:underline; }
+
   /* ---------- Launcher (hero) ---------- */
   .launcher-label{
     font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.15em; text-transform:uppercase;
@@ -307,6 +316,11 @@
     <div class="mb-quote" id="missedQuote"></div>
   </div>
 
+  <div class="ikigai-box" id="ikigaiBox" style="display:none">
+    <div class="mb-label" style="color:var(--gold)">◆ Ikigai — refleksja miesiąca</div>
+    <div id="ikigaiForm"></div>
+  </div>
+
   <div class="gami-box">
     <div class="gami-level" id="gamiLevel">1</div>
     <div class="gami-mid">
@@ -395,6 +409,7 @@
     <div class="tab active" data-tab="habits">Nawyki</div>
     <div class="tab" data-tab="todos">Do zrobienia</div>
     <div class="tab" data-tab="shopping">Zakupy</div>
+    <div class="tab" data-tab="watch">Filmy</div>
     <div class="tab" data-tab="notes">Notatki</div>
     <div class="tab" data-tab="links">Linki</div>
   </div>
@@ -457,6 +472,14 @@
     <div id="shoppingList"></div>
   </section>
 
+  <section class="panel" id="panel-watch">
+    <div class="note-add" style="margin-bottom:14px">
+      <input type="text" id="watchInput" placeholder="Dodaj tytuł filmu…" style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-sans);font-size:13.5px;outline:none" onkeydown="if(event.key==='Enter') addWatchItem()">
+      <div class="save-row"><button onclick="addWatchItem()">+ Dodaj</button></div>
+    </div>
+    <div id="watchList"></div>
+  </section>
+
   <section class="panel" id="panel-notes">
     <div id="notesList"></div>
   </section>
@@ -481,7 +504,23 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
+let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 }, ikigai: {}, watchList: [
+  { id:1, title:'The psychology of playing safe', done:false },
+  { id:2, title:'How to get Whatever you want', done:false },
+  { id:3, title:'The Desire to be Great', done:false },
+  { id:4, title:'57 Years Apart - a Boy and a Man Talk About Life', done:false },
+  { id:5, title:'Nothing changes if nothing changes', done:false },
+  { id:6, title:'When you stop caring, everything falls into place', done:false },
+  { id:7, title:'The beauty of losing yourself', done:false },
+  { id:8, title:'When Cartoon characters tried to tell us something', done:false },
+  { id:9, title:'The speech that brought this entire school to tears', done:false },
+  { id:10, title:'How to become a monster', done:false },
+  { id:11, title:'The mind of a Winner', done:false },
+  { id:12, title:'For those who are alone', done:false },
+  { id:13, title:'The goal is to experience', done:false },
+  { id:14, title:"Why didnt u cry?", done:false },
+  { id:15, title:'Birds do not sign in caves', done:false },
+] };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -605,6 +644,8 @@ const HABITS = [
   { id:'h37', period:'Dzień', text:'Dawka leku (medyczna marihuana)', time:'18:30' },
   { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku', time:'17:30' },
   { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech', time:'~15:30' },
+  { id:'h42', period:'Dzień', text:'Zero cukru dzisiaj (wyzwanie: miesiąc bez cukru)', time:'cały dzień' },
+  { id:'h43', period:'Dzień', text:'3 minuty medytacji', time:'~16:00' },
   // WIECZÓR — telefon offline 22:00, sen 23:00
   { id:'h39', period:'Wieczór', text:'Czytanie książki (1h)', time:'19:00' },
   { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro', time:'21:00' },
@@ -849,6 +890,51 @@ async function addCalendarEvent(){
   }catch(e){
     showToast('Błąd zapisu');
   }
+}
+
+const IKIGAI_QUESTIONS = [
+  { key:'kocham', label:'Co kocham robić?' },
+  { key:'dobry', label:'W czym jestem dobry?' },
+  { key:'potrzebuje', label:'Czego potrzebuje mój biznes / otoczenie / rodzina?' },
+  { key:'placa', label:'Za co mi płacą (albo mogliby zapłacić)?' },
+];
+
+function monthKey(d){ return d.toISOString().slice(0,7); } // "2026-07"
+
+function renderIkigai(){
+  const box = document.getElementById('ikigaiBox');
+  const today = new Date();
+  const isFirstOfMonth = today.getDate() === 1;
+
+  if(!DATA.ikigai) DATA.ikigai = {};
+  const thisMonthKey = monthKey(today);
+  const alreadyDoneThisMonth = !!DATA.ikigai[thisMonthKey];
+
+  if(!isFirstOfMonth || alreadyDoneThisMonth){
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+  const form = document.getElementById('ikigaiForm');
+  form.innerHTML = IKIGAI_QUESTIONS.map(q => `
+    <div class="ikigai-q">
+      <label>${q.label}</label>
+      <textarea id="ikigai-${q.key}" placeholder="…"></textarea>
+    </div>
+  `).join('') + `<button class="ikigai-save" onclick="saveIkigai()">Zapisz refleksję miesiąca</button>`;
+}
+
+function saveIkigai(){
+  const entry = { date: todayStr() };
+  IKIGAI_QUESTIONS.forEach(q => {
+    entry[q.key] = document.getElementById(`ikigai-${q.key}`).value.trim();
+  });
+  if(!DATA.ikigai) DATA.ikigai = {};
+  DATA.ikigai[monthKey(new Date())] = entry;
+  renderIkigai();
+  queueSave();
+  showToast('Zapisano refleksję Ikigai');
 }
 
 function renderQuoteAndMissed(){
@@ -1098,6 +1184,24 @@ async function loadData(){
     if(!DATA.shoppingList) DATA.shoppingList = [];
     if(!DATA.water) DATA.water = { date:"", ml:0 };
     if(!DATA.habitHistory) DATA.habitHistory = {};
+    if(!DATA.ikigai) DATA.ikigai = {};
+    if(!DATA.watchList) DATA.watchList = [
+      { id:1, title:'The psychology of playing safe', done:false },
+      { id:2, title:'How to get Whatever you want', done:false },
+      { id:3, title:'The Desire to be Great', done:false },
+      { id:4, title:'57 Years Apart - a Boy and a Man Talk About Life', done:false },
+      { id:5, title:'Nothing changes if nothing changes', done:false },
+      { id:6, title:'When you stop caring, everything falls into place', done:false },
+      { id:7, title:'The beauty of losing yourself', done:false },
+      { id:8, title:'When Cartoon characters tried to tell us something', done:false },
+      { id:9, title:'The speech that brought this entire school to tears', done:false },
+      { id:10, title:'How to become a monster', done:false },
+      { id:11, title:'The mind of a Winner', done:false },
+      { id:12, title:'For those who are alone', done:false },
+      { id:13, title:'The goal is to experience', done:false },
+      { id:14, title:"Why didnt u cry?", done:false },
+      { id:15, title:'Birds do not sign in caves', done:false },
+    ];
     setSyncStatus(true);
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
@@ -1131,7 +1235,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderQuoteAndMissed(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); loadPriority(); }
+function renderAll(){ renderQuoteAndMissed(); renderIkigai(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); renderWatchList(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
@@ -1366,6 +1470,66 @@ function renderShoppingList(){
 function toggleShoppingArchive(){
   DATA._shoppingArchiveOpen = !DATA._shoppingArchiveOpen;
   renderShoppingList();
+}
+
+/* Filmy do obejrzenia */
+function addWatchItem(){
+  const input = document.getElementById('watchInput');
+  const title = input.value.trim();
+  if(!title) return;
+  if(!DATA.watchList) DATA.watchList = [];
+  DATA.watchList.unshift({ id:Date.now(), title, done:false });
+  input.value = '';
+  renderWatchList(); queueSave();
+}
+function toggleWatchItem(id){
+  const t = DATA.watchList.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderWatchList(); queueSave();
+}
+function removeWatchItem(id){
+  DATA.watchList = DATA.watchList.filter(t=>t.id!==id);
+  renderWatchList(); queueSave();
+}
+function renderWatchList(){
+  const list = document.getElementById('watchList');
+  if(!DATA.watchList) DATA.watchList = [];
+  const active = DATA.watchList.filter(t => !t.done);
+  const watched = DATA.watchList.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Lista pusta</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row">
+        <input type="checkbox" onclick="toggleWatchItem(${t.id})">
+        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(t.title)}" target="_blank" onclick="event.stopPropagation()" class="h-text" style="color:var(--text);text-decoration:none">${escapeHtml(t.title)} <span style="color:var(--sage)">▶</span></a>
+        <span class="del" onclick="removeWatchItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleWatchArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Obejrzane (${watched.length}) <span>${DATA._watchArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div style="display:${DATA._watchArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += watched.length === 0
+    ? '<div class="empty">Brak obejrzanych.</div>'
+    : watched.map(t => `
+      <div class="habit-row done">
+        <input type="checkbox" checked onclick="toggleWatchItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.title)}</span>
+        <span class="del" onclick="removeWatchItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+function toggleWatchArchive(){
+  DATA._watchArchiveOpen = !DATA._watchArchiveOpen;
+  renderWatchList();
 }
 
 function showToast(msg){
