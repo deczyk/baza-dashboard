@@ -478,9 +478,8 @@
       <div id="awContent">Ładowanie…</div>
     </div>
     <div id="habitsProgress" class="habits-progress"></div>
-    <div style="text-align:right;margin-bottom:12px">
-      <span onclick="resetTodayHabits()" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);cursor:pointer;text-decoration:underline">Resetuj dzisiejszy dzień</span>
-    </div>
+    <button onclick="resetTodayHabits()" style="width:100%;margin-bottom:8px;background:var(--surface);border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:11px 0;font-family:var(--font-mono);font-size:12px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer">↺ Resetuj dzisiejszy dzień</button>
+    <button onclick="resetAllProgress()" style="width:100%;margin-bottom:16px;background:transparent;border:1px dashed var(--text-muted);color:var(--text-muted);border-radius:10px;padding:9px 0;font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer">Pełny reset (XP, poziom, streak)</button>
     <div class="heatmap-box">
       <div class="heatmap-label">◆ Ostatnie 12 tygodni</div>
       <div class="heatmap-grid" id="heatmapGrid"></div>
@@ -1035,6 +1034,19 @@ function resetTodayHabits(){
   renderGamification();
   queueSave();
   showToast('Zresetowano — jutro zaczynasz od zera');
+}
+
+function resetAllProgress(){
+  if(!confirm('To wyzeruje CAŁKOWICIE: dzisiejsze odhaczenia, XP, poziom i streak. Zadania/notatki/zakupy zostają nietknięte. Na pewno?')) return;
+  ensureHabitsToday();
+  DATA.habits.done = {};
+  DATA.habits.failed = {};
+  DATA.xp = 0;
+  DATA.streak = { count: 0, lastCompleteDate: "" };
+  renderHabits();
+  renderGamification();
+  queueSave();
+  showToast('Pełny reset wykonany — zaczynasz od poziomu 1');
 }
 
 function markHabitFailed(id){
