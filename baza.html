@@ -210,6 +210,25 @@
   .water-btn:active{ transform:scale(.96); }
   .water-btn.minus{ flex:0 0 44px; color:var(--text-muted); }
 
+  /* ---------- Licznik kalorii ---------- */
+  .cal-counter-box{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px;
+  }
+  .cal-counter-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .cal-counter-label{ font-family:var(--font-mono); font-size:10px; color:#D68F73; letter-spacing:.12em; text-transform:uppercase; }
+  .cal-counter-amount{ font-family:var(--font-mono); font-size:13px; color:var(--text); cursor:pointer; }
+  .cal-counter-bar{ height:8px; background:var(--surface-2); border-radius:4px; overflow:hidden; margin-bottom:12px; }
+  .cal-counter-bar-fill{ height:100%; background:linear-gradient(90deg, #B4664F, #D68F73); border-radius:4px; transition:width .3s ease; }
+  .cal-counter-bar-fill.over{ background:linear-gradient(90deg, #8a3d2c, #B4664F); }
+  .cal-counter-actions{ display:flex; gap:8px; margin-bottom:8px; }
+  .cal-counter-actions .water-btn.minus{ flex:0 0 44px; }
+  .cal-counter-custom{ display:flex; gap:8px; }
+  .cal-counter-custom input{
+    flex:1; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+    color:var(--text); font-family:var(--font-mono); font-size:13px; outline:none; min-width:0;
+  }
+  .cal-counter-custom input:focus{ border-color:#D68F73; }
+
   .launch-tile .glyph{
     width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
     font-size:20px;
@@ -428,6 +447,24 @@
       </div>
     </div>
 
+    <div class="cal-counter-box">
+      <div class="cal-counter-top">
+        <span class="cal-counter-label">🍽️ Kalorie</span>
+        <span class="cal-counter-amount" id="calorieAmount" onclick="editCalorieGoal()" title="Kliknij, żeby zmienić cel">0 / 2500 kcal</span>
+      </div>
+      <div class="cal-counter-bar"><div class="cal-counter-bar-fill" id="calorieBarFill" style="width:0%"></div></div>
+      <div class="cal-counter-actions">
+        <button class="water-btn minus" onclick="addCalories(-100)">−</button>
+        <button class="water-btn" onclick="addCalories(100)">+100</button>
+        <button class="water-btn" onclick="addCalories(300)">+300</button>
+        <button class="water-btn" onclick="addCalories(500)">+500</button>
+      </div>
+      <div class="cal-counter-custom">
+        <input type="number" id="calorieCustomInput" placeholder="Własna ilość kcal…" inputmode="numeric">
+        <button class="water-btn" onclick="addCalorieCustom()" style="flex:0 0 auto;padding:9px 16px">Dodaj</button>
+      </div>
+    </div>
+
     <div class="cal-box" id="calBox">
       <div class="water-top">
         <span class="water-label">📅 Kalendarz</span>
@@ -504,7 +541,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 }, ikigai: {}, watchList: [
+let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 }, calories: { date:"", kcal:0, goal:2500 }, ikigai: {}, watchList: [
   { id:1, title:'The psychology of playing safe', done:false },
   { id:2, title:'How to get Whatever you want', done:false },
   { id:3, title:'The Desire to be Great', done:false },
@@ -777,6 +814,49 @@ function addWater(amount){
   renderWater();
   queueSave();
 }
+
+/* ---------- Kalorie ---------- */
+function ensureCaloriesToday(){
+  if(!DATA.calories) DATA.calories = { date:"", kcal:0, goal:2500 };
+  if(typeof DATA.calories.goal !== 'number') DATA.calories.goal = 2500;
+  if(DATA.calories.date !== todayStr()){
+    DATA.calories = { date: todayStr(), kcal:0, goal: DATA.calories.goal };
+  }
+}
+function addCalories(amount){
+  ensureCaloriesToday();
+  DATA.calories.kcal = Math.max(0, DATA.calories.kcal + amount);
+  renderCalories();
+  queueSave();
+}
+function addCalorieCustom(){
+  const input = document.getElementById('calorieCustomInput');
+  const val = parseInt(input.value, 10);
+  if(!val || val <= 0){ showToast('Podaj liczbę kcal'); return; }
+  addCalories(val);
+  input.value = '';
+}
+function editCalorieGoal(){
+  ensureCaloriesToday();
+  const newGoal = prompt('Dzienny cel kcal:', DATA.calories.goal);
+  if(newGoal === null) return;
+  const parsed = parseInt(newGoal, 10);
+  if(!parsed || parsed <= 0){ showToast('Nieprawidłowa wartość'); return; }
+  DATA.calories.goal = parsed;
+  renderCalories();
+  queueSave();
+}
+function renderCalories(){
+  ensureCaloriesToday();
+  const kcal = DATA.calories.kcal;
+  const goal = DATA.calories.goal;
+  const pct = Math.min(100, Math.round((kcal / goal) * 100));
+  document.getElementById('calorieAmount').textContent = `${kcal} / ${goal} kcal`;
+  const fill = document.getElementById('calorieBarFill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('over', kcal > goal);
+}
+
 async function loadActivityWatch(){
   const box = document.getElementById('awContent');
   const AW = 'http://localhost:5600';
@@ -1183,6 +1263,7 @@ async function loadData(){
     if(!DATA.todos) DATA.todos = [];
     if(!DATA.shoppingList) DATA.shoppingList = [];
     if(!DATA.water) DATA.water = { date:"", ml:0 };
+    if(!DATA.calories) DATA.calories = { date:"", kcal:0, goal:2500 };
     if(!DATA.habitHistory) DATA.habitHistory = {};
     if(!DATA.ikigai) DATA.ikigai = {};
     if(!DATA.watchList) DATA.watchList = [
@@ -1235,7 +1316,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderQuoteAndMissed(); renderIkigai(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); renderWatchList(); loadPriority(); }
+function renderAll(){ renderQuoteAndMissed(); renderIkigai(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderCalories(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); renderWatchList(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
