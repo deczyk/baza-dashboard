@@ -19,20 +19,23 @@ module.exports = async (req, res) => {
     try {
       const r = await fetch(`${BASE}/latest`, { headers: { "X-Master-Key": KEY } });
       const data = await r.json();
-      res.status(200).json({ history: (data.record && data.record.history) || [] });
+      res.status(200).json({
+        history: (data.record && data.record.history) || [],
+        lastGreetingDate: (data.record && data.record.lastGreetingDate) || null,
+      });
     } catch (e) {
-      res.status(200).json({ history: [], error: e.message });
+      res.status(200).json({ history: [], lastGreetingDate: null, error: e.message });
     }
     return;
   }
 
   if (req.method === "POST") {
     try {
-      const { history } = req.body;
+      const { history, lastGreetingDate } = req.body;
       await fetch(BASE, {
         method: "PUT",
         headers: { "X-Master-Key": KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ history: history || [] }),
+        body: JSON.stringify({ history: history || [], lastGreetingDate: lastGreetingDate || null }),
       });
       res.status(200).json({ ok: true });
     } catch (e) {
