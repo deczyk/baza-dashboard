@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Debrain</title>
+<meta name="theme-color" content="#14181B">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
+    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+  body { -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+
+  .shell { max-width: 720px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; }
+  header {
+    padding: 20px 16px 14px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-name { font-size: 20px; font-weight: 700; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); box-shadow: 0 0 6px var(--sage); animation: pulse 2.6s infinite; }
+  .dot.thinking { animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(107,156,137,.5)} 70%{box-shadow:0 0 0 9px rgba(107,156,137,0)} 100%{box-shadow:0 0 0 0 rgba(107,156,137,0)} }
+  .tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .back-link { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-decoration: none; letter-spacing: .05em; }
+  .back-link:hover { color: var(--gold); }
+
+  main { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { display: flex; flex-direction: column; gap: 5px; max-width: 88%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .who { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .bubble {
+    padding: 11px 14px; border-radius: 12px; font-size: 14px; line-height: 1.55;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .msg.user .bubble { background: rgba(201,168,118,0.14); color: var(--text); border: 1px solid var(--gold); border-bottom-right-radius: 3px; }
+  .msg.assistant .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+
+  footer { padding: 12px 16px 18px; border-top: 1px solid var(--line); }
+  form { display: flex; gap: 10px; }
+  textarea {
+    flex: 1; resize: none; background: var(--surface); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--font-sans); font-size: 14px; padding: 12px 14px; border-radius: 10px; outline: none;
+    min-height: 46px; max-height: 140px;
+  }
+  textarea:focus { border-color: var(--gold); }
+  button.send {
+    background: var(--gold); color: #14181B; border: none; padding: 0 20px;
+    font-family: var(--font-mono); font-weight: 700; font-size: 12.5px; letter-spacing: .05em;
+    text-transform: uppercase; border-radius: 10px; cursor: pointer;
+  }
+  button.send:disabled { opacity: .5; }
+  button.send:active { transform: scale(.96); }
+
+  .empty { color: var(--text-muted); font-size: 13px; margin-top: 30px; line-height: 1.7; font-family: var(--font-mono); text-align: center; }
+  ::-webkit-scrollbar { width: 7px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name">Debrain</span><span class="tag">deepseek v3.2</span></div>
+    <a class="back-link" href="index.html">◆ Baza</a>
+  </header>
+  <main id="chatLog">
+    <div class="empty">Twój agent. Pisze, przeszukuje sieć, pamięta rozmowę w tej sesji.</div>
+  </main>
+  <footer>
+    <form id="chatForm">
+      <textarea id="input" placeholder="Zapytaj Debrain…" rows="1"></textarea>
+      <button type="submit" class="send" id="sendBtn">Wyślij</button>
+    </form>
+  </footer>
+</div>
+
+<script>
+  // Wymaga przejścia przez PIN na index.html
+  if (sessionStorage.getItem('baza_unlocked') !== '1') {
+    window.location.href = 'index.html';
+  }
+
+  const log = document.getElementById('chatLog');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const dot = document.getElementById('statusDot');
+
+  let history = [];
+  let firstMessage = true;
+
+  function addMsg(role, text) {
+    if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = role === 'user' ? 'ty' : 'debrain';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    wrap.appendChild(who);
+    wrap.appendChild(bubble);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return bubble;
+  }
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMsg('user', text);
+    history.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    dot.classList.add('thinking');
+
+    const thinkingBubble = addMsg('assistant', 'myślę…');
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history }),
+      });
+      const data = await res.json();
+      thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
+      history = data.history || history;
+    } catch (err) {
+      thinkingBubble.textContent = 'Błąd połączenia: ' + err.message;
+    } finally {
+      sendBtn.disabled = false;
+      dot.classList.remove('thinking');
+      log.scrollTop = log.scrollHeight;
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+</script>
+</body>
+</html>
