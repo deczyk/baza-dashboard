@@ -9,18 +9,34 @@
 //   CRM_PANEL_PASSWORD    — hasło do panelu CRM (opcjonalnie, do read_crm_data)
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-const MODEL = "deepseek-chat";
+const DEFAULT_MODEL = "deepseek-chat";
+const ALLOWED_MODELS = ["deepseek-chat", "deepseek-reasoner"];
 
-const SYSTEM_PROMPT = `Jesteś Debrain — osobisty agent AI Kuby, dostępny przez panel webowy na decz.pl.
-Mówisz po polsku, zwięźle i konkretnie, dajesz gotowe rozwiązania. Masz narzędzia:
+const SYSTEM_PROMPT = `Jesteś Debrain — osobisty agent Kuby, dostępny przez panel webowy na decz.pl.
+
+CHARAKTER: Zwracasz się do Kuby tak, jak Alfred Pennyworth zwracał się do Bruce'a Wayne'a — z nienaganną
+klasą, lojalnością i spokojem, ale też z odrobiną suchego, delikatnie ironicznego humoru, kiedy sytuacja na to
+pozwala. Jesteś opanowany, rzeczowy, nigdy nie jesteś przesadnie entuzjastyczny ani przymilny. Możesz pozwolić
+sobie na taktowną uwagę, jeśli Kuba np. zaniedbuje nawyki albo odkłada coś na później — tak jak zrobiłby to
+zaufany, doświadczony powiernik, a nie asystent korporacyjny. Zwracaj się per "Pan/Pana" w duchu tej relacji,
+chyba że Kuba wyraźnie poprosi inaczej.
+
+FORMATOWANIE: Piszesz zwykłym tekstem, bez formatowania markdown — żadnych gwiazdek (**), podkreśleń, list
+numerowanych ze znacznikami itp. Jeśli chcesz wymienić kilka rzeczy, rób to w zdaniach albo z myślnikiem "-",
+nigdy z ** wokół słów. Twoje odpowiedzi trafiają do zwykłego pola tekstowego, które nie renderuje markdown.
+
+NARZĘDZIA:
 - web_search — aktualne informacje z sieci
-- read_baza_data — odczyt danych z dashboardu Baza (nawyki, zadania, priorytet, notatki, streak, XP)
-- update_baza_data — zapis do Bazy (dodanie zadania/notatki/produktu na zakupy, odznaczenie nawyku, ustawienie priorytetu dnia)
+- read_baza_data — odczyt danych z dashboardu Baza (nawyki, zadania, priorytet, notatki, streak, XP, lista filmów do obejrzenia)
+- update_baza_data — zapis do Bazy (dodanie zadania/notatki/produktu na zakupy/filmu do obejrzenia, odznaczenie nawyku, ustawienie priorytetu dnia)
 - read_calendar — odczyt najbliższych wydarzeń z Google Calendar (podpięty w Bazie)
 - create_calendar_event — dodanie wydarzenia do kalendarza
 - read_crm_data — odczyt danych z CRM firmy Sklep za Stodołą (klienci, sprawy w toku, terminy, instalacje)
-Używaj ich proaktywnie, kiedy pytanie/prośba tego wymaga, zamiast zgadywać. Przy zapisie danych (update_baza_data,
-create_calendar_event) wykonaj akcję i potwierdź krótko co zrobiłeś.`;
+Czasem dostaniesz w wiadomości tekst oznaczony jako odczytany z OCR ze zrzutu ekranu — to wyekstrahowany
+tekst, nie pełne widzenie obrazu, więc traktuj go jak dowolny inny tekst do analizy, nie zakładaj że widziałeś
+układ graficzny czy kolory.
+Używaj narzędzi proaktywnie, kiedy pytanie/prośba tego wymaga, zamiast zgadywać. Przy zapisie danych (update_baza_data,
+create_calendar_event) wykonaj akcję i potwierdź krótko, po swojemu, co zostało zrobione.`;
 
 const TOOLS_SCHEMA = [
   {
@@ -39,7 +55,7 @@ const TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "read_baza_data",
-      description: "Czyta aktualne dane z dashboardu Baza: priorytet dnia, zadania do zrobienia, listę zakupów, postęp nawyków dzisiaj, streak, XP, ostatnie notatki.",
+      description: "Czyta aktualne dane z dashboardu Baza: priorytet dnia, zadania do zrobienia, listę zakupów, listę filmów do obejrzenia, postęp nawyków dzisiaj, streak, XP, ostatnie notatki.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -53,10 +69,10 @@ const TOOLS_SCHEMA = [
         properties: {
           action: {
             type: "string",
-            enum: ["add_todo", "add_note", "add_shopping_item", "set_priority", "toggle_habit"],
+            enum: ["add_todo", "add_note", "add_shopping_item", "add_watch_item", "set_priority", "toggle_habit"],
             description: "Rodzaj akcji do wykonania",
           },
-          text: { type: "string", description: "Treść zadania / notatki / produktu / priorytetu dnia (dla add_todo, add_note, add_shopping_item, set_priority)" },
+          text: { type: "string", description: "Treść zadania / notatki / produktu / tytułu filmu / priorytetu dnia (dla add_todo, add_note, add_shopping_item, add_watch_item, set_priority)" },
           habit_id: { type: "string", description: "ID nawyku do odznaczenia (tylko dla toggle_habit, format 'hNN', np. 'h1')" },
         },
         required: ["action"],
@@ -148,6 +164,7 @@ async function readBazaData() {
       priorytet_dnia: data.priority || null,
       zadania: data.todos || [],
       lista_zakupow: data.shoppingList || [],
+      lista_filmow_do_obejrzenia: data.watchList || [],
       nawyki_dzis: data.habits || null,
       streak_dni: data.streak ? data.streak.count : null,
       xp: data.xp || 0,
@@ -181,6 +198,11 @@ async function updateBazaData(args) {
         if (!args.text) return "Brak nazwy produktu.";
         if (!data.shoppingList) data.shoppingList = [];
         data.shoppingList.unshift({ text: args.text, done: false, id: Date.now() });
+        break;
+      case "add_watch_item":
+        if (!args.text) return "Brak tytułu filmu.";
+        if (!data.watchList) data.watchList = [];
+        data.watchList.unshift({ title: args.text, done: false, id: Date.now() });
         break;
       case "set_priority":
         if (!args.text) return "Brak treści priorytetu.";
@@ -272,11 +294,11 @@ const TOOL_IMPL = {
   read_crm_data: () => readCrmData(),
 };
 
-async function callDeepSeek(messages) {
+async function callDeepSeek(messages, model) {
   const resp = await fetch(DEEPSEEK_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS_SCHEMA, temperature: 0.4 }),
+    body: JSON.stringify({ model, messages, tools: TOOLS_SCHEMA, temperature: 0.4 }),
   });
   if (!resp.ok) {
     const errText = await resp.text();
@@ -292,12 +314,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { history } = req.body;
+    const { history, model: requestedModel } = req.body;
+    const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let messages = [{ role: "system", content: SYSTEM_PROMPT }, ...(history || [])];
     let finalContent = null;
 
-    for (let i = 0; i < 6 && finalContent === null; i++) {
-      const data = await callDeepSeek(messages);
+    for (let i = 0; i < 10 && finalContent === null; i++) {
+      const data = await callDeepSeek(messages, model);
       const choice = data.choices[0].message;
       messages.push(choice);
 
@@ -317,6 +340,7 @@ module.exports = async (req, res) => {
     res.status(200).json({
       reply: finalContent || "⚠️ Nie udało się uzyskać odpowiedzi.",
       history: messages.filter((m) => m.role !== "system"),
+      model,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
