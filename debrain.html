@@ -84,6 +84,14 @@
   button.send:disabled { opacity: .5; }
   button.send:active { transform: scale(.96); }
 
+  button.attach {
+    background: var(--surface); border: 1px solid var(--line); color: var(--text-muted);
+    width: 46px; height: 46px; border-radius: 10px; font-size: 18px; cursor: pointer; flex-shrink: 0;
+  }
+  button.attach:hover { border-color: var(--sage); color: var(--sage); }
+  button.attach:disabled { opacity: .5; cursor: default; }
+  .ocr-status { font-family: var(--font-mono); font-size: 11px; color: var(--sage); margin-top: 8px; text-align: center; }
+
   .empty { color: var(--text-muted); font-size: 13px; margin-top: 30px; line-height: 1.7; font-family: var(--font-mono); text-align: center; }
   ::-webkit-scrollbar { width: 7px; }
   ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
@@ -101,7 +109,7 @@
 <div id="app">
   <div class="shell">
     <header>
-      <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name">Debrain</span><span class="tag">deepseek v3.2</span></div>
+      <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name">Debrain</span><span class="tag" id="modelTag">deepseek-chat</span></div>
       <a class="back-link" href="index.html">◆ Baza</a>
     </header>
     <main id="chatLog">
@@ -109,13 +117,17 @@
     </main>
     <footer>
       <form id="chatForm">
-        <textarea id="input" placeholder="Zapytaj Debrain…" rows="1"></textarea>
+        <button type="button" class="attach" id="attachBtn" title="Załącz zrzut ekranu (OCR)">📎</button>
+        <input type="file" id="imageInput" accept="image/*" style="display:none">
+        <textarea id="input" placeholder="Zapytaj Debrain… (/reasoner, /chat, /nowa)" rows="1"></textarea>
         <button type="submit" class="send" id="sendBtn">Wyślij</button>
       </form>
+      <div id="ocrStatus" class="ocr-status" style="display:none"></div>
     </footer>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
   // ---------- Własny PIN dla Debrain (niezależny od PIN-u Bazy) ----------
   const DEBRAIN_PIN = "5855"; // <-- zmień na swój, jeśli chcesz inny niż PIN Bazy
@@ -146,10 +158,20 @@
   const input = document.getElementById('input');
   const sendBtn = document.getElementById('sendBtn');
   const dot = document.getElementById('statusDot');
+  const modelTag = document.getElementById('modelTag');
+  const attachBtn = document.getElementById('attachBtn');
+  const imageInput = document.getElementById('imageInput');
+  const ocrStatus = document.getElementById('ocrStatus');
 
   let history = [];
   let firstMessage = true;
   let saveTimer = null;
+  let currentModel = 'deepseek-chat';
+  let lastGreetingDate = null;
+
+  function todayStr(){
+    return new Date().toISOString().slice(0, 10);
+  }
 
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
@@ -168,13 +190,14 @@
     return bubble;
   }
 
-  const GREETING_PROMPT = "[Wejście do czatu — nowa sesja] Przywitaj się krótko, po swojemu. Następnie podaj jeden cytat motywacyjny (dowolny autor, po polsku lub z tłumaczeniem) oraz jedną naprawdę niszową, mało znaną ciekawostkę o świecie — coś, czego większość ludzi nie słyszała, nie oczywiste jak 'miód nie psuje się'. Bądź zwięzły, bez gwiazdek.";
+  const GREETING_PROMPT = "[Nowy dzień] Przywitaj się krótko, po swojemu. Następnie podaj jeden cytat motywacyjny (dowolny autor, po polsku lub z tłumaczeniem) oraz jedną naprawdę niszową, mało znaną ciekawostkę o świecie — coś, czego większość ludzi nie słyszała, nie oczywiste jak 'miód nie psuje się'. Bądź zwięzły, bez gwiazdek.";
 
   async function initChat(){
     try {
       const res = await fetch('/api/debrain-memory');
       const data = await res.json();
       history = data.history || [];
+      lastGreetingDate = data.lastGreetingDate || null;
       if (history.length === 0) {
         log.innerHTML = '<div class="empty">Twój agent. Pisze, przeszukuje sieć, zna dane z Bazy, pamięta rozmowę między sesjami.</div>';
       } else {
@@ -189,9 +212,9 @@
       log.innerHTML = '<div class="empty">Twój agent. (Pamięć trwała niedostępna — sprawdź konfigurację.)</div>';
     }
 
-    // Powitanie: raz na sesję (kartę), nie przy każdym odświeżeniu w tej samej karcie
-    if (sessionStorage.getItem('debrain_greeted') !== '1') {
-      sessionStorage.setItem('debrain_greeted', '1');
+    // Powitanie: raz dziennie, licząc od daty ostatniego, nie od otwarcia karty
+    if (lastGreetingDate !== todayStr()) {
+      lastGreetingDate = todayStr();
       await sendToDebrain(GREETING_PROMPT, { hideUserBubble: true });
     }
   }
@@ -202,7 +225,7 @@
       fetch('/api/debrain-memory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history }),
+        body: JSON.stringify({ history, lastGreetingDate }),
       }).catch(() => {});
     }, 400);
   }
@@ -219,11 +242,12 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history }),
+        body: JSON.stringify({ history, model: currentModel }),
       });
       const data = await res.json();
       thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
       history = data.history || history;
+      if (data.model) { currentModel = data.model; modelTag.textContent = currentModel; }
       queueSaveMemory();
     } catch (err) {
       thinkingBubble.textContent = 'Błąd połączenia: ' + err.message;
@@ -245,6 +269,27 @@
     if (!text) return;
     input.value = '';
     input.style.height = 'auto';
+
+    if (text === '/reasoner') {
+      currentModel = 'deepseek-reasoner';
+      modelTag.textContent = 'deepseek-reasoner';
+      addMsg('assistant', 'Przełączono na deepseek-reasoner — wolniejszy, ale mocniejszy w wieloetapowym rozumowaniu.');
+      return;
+    }
+    if (text === '/chat') {
+      currentModel = 'deepseek-chat';
+      modelTag.textContent = 'deepseek-chat';
+      addMsg('assistant', 'Przełączono z powrotem na deepseek-chat.');
+      return;
+    }
+    if (text === '/nowa') {
+      history = [];
+      firstMessage = true;
+      log.innerHTML = '<div class="empty">Nowa rozmowa. Poprzednia pozostaje zapisana w pamięci trwałej, ale zaczynamy od zera w tej sesji.</div>';
+      queueSaveMemory();
+      return;
+    }
+
     await sendToDebrain(text);
   });
 
@@ -252,6 +297,39 @@
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       form.requestSubmit();
+    }
+  });
+
+  // ---------- OCR zrzutów ekranu (Tesseract.js — działa w przeglądarce, bez wysyłania obrazu na serwer) ----------
+  attachBtn.addEventListener('click', () => imageInput.click());
+
+  imageInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    attachBtn.disabled = true;
+    ocrStatus.style.display = 'block';
+    ocrStatus.textContent = 'Czytam tekst ze zrzutu ekranu…';
+
+    try {
+      const worker = await Tesseract.createWorker('pol+eng');
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+
+      const extracted = (text || '').trim();
+      ocrStatus.style.display = 'none';
+      imageInput.value = '';
+
+      if (!extracted) {
+        addMsg('assistant', 'Nie udało się odczytać żadnego tekstu z tego obrazu.');
+        return;
+      }
+      const prompt = `[Odczytano tekst ze zrzutu ekranu przez OCR — to nie jest pełne widzenie obrazu, tylko wyekstrahowany tekst]\n\n${extracted}\n\nPrzeanalizuj powyższe.`;
+      await sendToDebrain(prompt, { hideUserBubble: false });
+    } catch (err) {
+      ocrStatus.style.display = 'none';
+      addMsg('assistant', 'Błąd OCR: ' + err.message);
+    } finally {
+      attachBtn.disabled = false;
     }
   });
 </script>
