@@ -181,11 +181,14 @@ def greeting():
     answer, updated_full = core.run_agent(
         core.GREETING_PROMPT, history=full_history, model=STATE["model"], verbose=False
     )
-    updated_history = [m for m in updated_full if m.get("role") != "system"]
-    core.chats_save_history(chat_id, updated_history)
+    # Zapisujemy tylko czystą odpowiedź asystenta — bez ukrytego triggera i bez śmieci
+    # narzędziowych (tool_calls/tool), żeby przy ponownym otwarciu czatu nie pokazało się
+    # jako widoczna wiadomość "TY".
+    clean_history = chat_history + [{"role": "assistant", "content": answer}]
+    core.chats_save_history(chat_id, clean_history)
     core.chats_set_greeting_date(today)
 
-    return jsonify({"skip": False, "reply": answer, "history": updated_history})
+    return jsonify({"skip": False, "reply": answer, "history": clean_history})
 
 
 def open_browser():
