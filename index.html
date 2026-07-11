@@ -152,6 +152,7 @@
   .habit-row .h-text{ font-size:13.5px; }
   .habit-row.done{ opacity:.5; }
   .habit-row.done .h-text{ text-decoration:line-through; color:var(--text-muted); }
+  .habit-row.failed{ border-left:3px solid var(--danger); background:rgba(180,102,79,0.06); }
   @keyframes checkPop{ 0%{transform:scale(1);} 40%{transform:scale(1.15);} 100%{transform:scale(1);} }
   .habit-row.just-checked{ animation:checkPop .3s ease; }
   @keyframes levelFlash{ 0%{transform:scale(1);} 50%{transform:scale(1.25); box-shadow:0 0 20px var(--gold);} 100%{transform:scale(1);} }
@@ -393,6 +394,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="habits">Nawyki</div>
     <div class="tab" data-tab="todos">Do zrobienia</div>
+    <div class="tab" data-tab="shopping">Zakupy</div>
     <div class="tab" data-tab="notes">Notatki</div>
     <div class="tab" data-tab="links">Linki</div>
   </div>
@@ -447,6 +449,14 @@
     <div id="todosList"></div>
   </section>
 
+  <section class="panel" id="panel-shopping">
+    <div class="note-add" style="margin-bottom:14px">
+      <input type="text" id="shoppingInput" placeholder="Dodaj produkt…" style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-sans);font-size:13.5px;outline:none" onkeydown="if(event.key==='Enter') addShoppingItem()">
+      <div class="save-row"><button onclick="addShoppingItem()">+ Dodaj</button></div>
+    </div>
+    <div id="shoppingList"></div>
+  </section>
+
   <section class="panel" id="panel-notes">
     <div id="notesList"></div>
   </section>
@@ -471,7 +481,7 @@ const CONFIG = {
 
 const API = '/api/baza-data';
 
-let DATA = { links: [], notes: [], todos: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
+let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 } };
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -571,15 +581,17 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 const HABITS = [
   // RANO — budzik 7:00
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min', time:'7:00' },
-  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu', time:'7:00' },
-  { id:'h5', period:'Rano', text:'Otworzenie okna / świeże powietrze (1-2 min)', time:'7:05' },
-  { id:'h4', period:'Rano', text:'Zasłanie łóżka', time:'7:05' },
-  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów', time:'7:10' },
-  { id:'h6', period:'Rano', text:'Naturalne światło / spacer rano (5-10 min)', time:'7:15' },
-  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html', time:'7:25' },
-  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki', time:'7:30' },
-  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna', time:'7:35' },
-  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy', time:'7:50' },
+  { id:'h5', period:'Rano', text:'Otworzenie okna / naturalne światło od razu po wstaniu', time:'7:02' },
+  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu (przed kawą)', time:'7:05' },
+  { id:'h6', period:'Rano', text:'Spacer bez słuchawek, najlepiej z kawą na świeżym powietrzu (5-10 min)', time:'7:10' },
+  { id:'h4', period:'Rano', text:'Zasłanie łóżka — pierwszy zaliczony punkt dnia', time:'7:20' },
+  { id:'h40', period:'Rano', text:'Zimny prysznic (opcjonalnie — nie dla każdego)', time:'7:25' },
+  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html', time:'7:35' },
+  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki', time:'7:40' },
+  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna', time:'7:45' },
+  { id:'h41', period:'Rano', text:'E-papieros — dopiero teraz, nie wcześniej', time:'7:50' },
+  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów (po śniadaniu)', time:'7:55' },
+  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy', time:'8:00' },
   // DZIEŃ
   { id:'h11', period:'Dzień', text:'Wypij wodę do południa', time:'do 12:00' },
   { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)', time:'co godzinę' },
@@ -594,6 +606,7 @@ const HABITS = [
   { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku', time:'17:30' },
   { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech', time:'~15:30' },
   // WIECZÓR — telefon offline 22:00, sen 23:00
+  { id:'h39', period:'Wieczór', text:'Czytanie książki (1h)', time:'19:00' },
   { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro', time:'21:00' },
   { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki', time:'21:15' },
   { id:'h38', period:'Wieczór', text:'Dawka leku (medyczna marihuana)', time:'21:30' },
@@ -886,8 +899,30 @@ function resetTodayHabits(){
   showToast('Zresetowano — jutro zaczynasz od zera');
 }
 
+function markHabitFailed(id){
+  ensureHabitsToday();
+  if(!DATA.habits.failed) DATA.habits.failed = {};
+  const wasFailed = !!DATA.habits.failed[id];
+
+  if(wasFailed){
+    DATA.habits.failed[id] = false;
+  } else {
+    // jeśli było odhaczone jako zrobione, cofamy XP tak samo jak przy zwykłym odznaczeniu
+    if(DATA.habits.done[id]){
+      DATA.xp = Math.max(0, (DATA.xp || 0) - 10);
+      DATA.habits.done[id] = false;
+    }
+    DATA.habits.failed[id] = true;
+  }
+
+  renderHabits();
+  renderGamification();
+  queueSave();
+}
+
 function toggleHabit(id){
   ensureHabitsToday();
+  if(DATA.habits.failed && DATA.habits.failed[id]) DATA.habits.failed[id] = false;
   const wasDone = !!DATA.habits.done[id];
   DATA.habits.done[id] = !wasDone;
   DATA._justToggled = id;
@@ -999,12 +1034,14 @@ function renderHabits(){
 
     items.forEach(h => {
       const done = !!DATA.habits.done[h.id];
+      const failed = !!(DATA.habits.failed && DATA.habits.failed[h.id]);
       const row = document.createElement('div');
-      row.className = 'habit-row' + (done ? ' done' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
+      row.className = 'habit-row' + (done ? ' done' : '') + (failed ? ' failed' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
       row.onclick = () => toggleHabit(h.id);
       const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
       const timeBadge = h.time ? `<span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--gold);background:rgba(201,168,118,0.14);border:1px solid rgba(201,168,118,0.35);border-radius:8px;padding:3px 9px;margin-left:auto;white-space:nowrap">${h.time}</span>` : '';
-      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>${timeBadge}`;
+      const failBtn = `<span onclick="event.stopPropagation(); markHabitFailed('${h.id}')" title="Nie zrobiłem" style="cursor:pointer;font-size:14px;opacity:${failed?'1':'0.35'};margin-left:8px">😔</span>`;
+      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>${timeBadge}${failBtn}`;
       list.appendChild(row);
     });
   });
@@ -1058,6 +1095,7 @@ async function loadData(){
     if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
     if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
     if(!DATA.todos) DATA.todos = [];
+    if(!DATA.shoppingList) DATA.shoppingList = [];
     if(!DATA.water) DATA.water = { date:"", ml:0 };
     if(!DATA.habitHistory) DATA.habitHistory = {};
     setSyncStatus(true);
@@ -1093,7 +1131,7 @@ function setSyncStatus(ok, txt){
 }
 
 /* ---------- Render ---------- */
-function renderAll(){ renderQuoteAndMissed(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); loadPriority(); }
+function renderAll(){ renderQuoteAndMissed(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); loadPriority(); }
 
 /* Links */
 function renderLinks(){
@@ -1166,8 +1204,9 @@ function undoDelete(){
   if(!lastDeleted) return;
   if(lastDeleted.type === 'note') DATA.notes.splice(lastDeleted.index, 0, lastDeleted.item);
   if(lastDeleted.type === 'todo') DATA.todos.splice(lastDeleted.index, 0, lastDeleted.item);
+  if(lastDeleted.type === 'shopping') DATA.shoppingList.splice(lastDeleted.index, 0, lastDeleted.item);
   lastDeleted = null;
-  renderNotes(); renderTodos(); queueSave();
+  renderNotes(); renderTodos(); renderShoppingList(); queueSave();
   document.getElementById('toast').classList.remove('show');
 }
 function showUndoToast(msg){
@@ -1253,6 +1292,80 @@ function renderTodos(){
 function toggleTodoArchive(){
   DATA._todoArchiveOpen = !DATA._todoArchiveOpen;
   renderTodos();
+}
+
+/* Zakupy */
+function addShoppingItem(){
+  const input = document.getElementById('shoppingInput');
+  const text = input.value.trim();
+  if(!text) return;
+  if(!DATA.shoppingList) DATA.shoppingList = [];
+  DATA.shoppingList.unshift({ id:Date.now(), text, done:false });
+  input.value = '';
+  renderShoppingList(); queueSave();
+}
+function toggleShoppingItem(id){
+  const t = DATA.shoppingList.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderShoppingList(); queueSave();
+}
+function removeShoppingItem(id){
+  const idx = DATA.shoppingList.findIndex(t=>t.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'shopping', item: DATA.shoppingList[idx], index: idx };
+  DATA.shoppingList.splice(idx, 1);
+  renderShoppingList(); queueSave();
+  showUndoToast('Usunięto z listy zakupów');
+}
+function editShoppingItem(id){
+  const t = DATA.shoppingList.find(t=>t.id===id);
+  if(!t) return;
+  const updated = prompt('Edytuj produkt:', t.text);
+  if(updated === null) return;
+  t.text = updated.trim();
+  renderShoppingList(); queueSave();
+}
+function renderShoppingList(){
+  const list = document.getElementById('shoppingList');
+  if(!DATA.shoppingList) DATA.shoppingList = [];
+  const active = DATA.shoppingList.filter(t => !t.done);
+  const bought = DATA.shoppingList.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Lista pusta</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row" onclick="toggleShoppingItem(${t.id})">
+        <input type="checkbox" onclick="event.stopPropagation(); toggleShoppingItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span onclick="event.stopPropagation(); editShoppingItem(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span>
+        <span class="del" onclick="event.stopPropagation(); removeShoppingItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleShoppingArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Kupione (${bought.length}) <span id="shoppingArchiveArrow">${DATA._shoppingArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div id="shoppingArchiveBox" style="display:${DATA._shoppingArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += bought.length === 0
+    ? '<div class="empty">Brak kupionych rzeczy.</div>'
+    : bought.map(t => `
+      <div class="habit-row done" onclick="toggleShoppingItem(${t.id})">
+        <input type="checkbox" checked onclick="event.stopPropagation(); toggleShoppingItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span class="del" onclick="event.stopPropagation(); removeShoppingItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+
+function toggleShoppingArchive(){
+  DATA._shoppingArchiveOpen = !DATA._shoppingArchiveOpen;
+  renderShoppingList();
 }
 
 function showToast(msg){
