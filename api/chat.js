@@ -27,8 +27,8 @@ nigdy z ** wokół słów. Twoje odpowiedzi trafiają do zwykłego pola tekstowe
 
 NARZĘDZIA:
 - web_search — aktualne informacje z sieci
-- read_baza_data — odczyt danych z dashboardu Baza (nawyki, zadania, priorytet, notatki, streak, XP, lista filmów do obejrzenia)
-- update_baza_data — zapis do Bazy (dodanie zadania/notatki/produktu na zakupy/filmu do obejrzenia, odznaczenie nawyku, ustawienie priorytetu dnia)
+- read_baza_data — odczyt danych z dashboardu Baza (nawyki, zadania, priorytet, notatki, streak, XP, lista filmów do obejrzenia, kalorie dzisiaj)
+- update_baza_data — zapis do Bazy (dodanie zadania/notatki/produktu na zakupy/filmu do obejrzenia/kalorii, odznaczenie nawyku, ustawienie priorytetu dnia)
 - read_calendar — odczyt najbliższych wydarzeń z Google Calendar (podpięty w Bazie)
 - create_calendar_event — dodanie wydarzenia do kalendarza
 - read_crm_data — odczyt danych z CRM firmy Sklep za Stodołą (klienci, sprawy w toku, terminy, instalacje)
@@ -55,7 +55,7 @@ const TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "read_baza_data",
-      description: "Czyta aktualne dane z dashboardu Baza: priorytet dnia, zadania do zrobienia, listę zakupów, listę filmów do obejrzenia, postęp nawyków dzisiaj, streak, XP, ostatnie notatki.",
+      description: "Czyta aktualne dane z dashboardu Baza: priorytet dnia, zadania do zrobienia, listę zakupów, listę filmów do obejrzenia, kalorie zjedzone dzisiaj i dzienny cel, postęp nawyków dzisiaj, streak, XP, ostatnie notatki.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -69,10 +69,11 @@ const TOOLS_SCHEMA = [
         properties: {
           action: {
             type: "string",
-            enum: ["add_todo", "add_note", "add_shopping_item", "add_watch_item", "set_priority", "toggle_habit"],
+            enum: ["add_todo", "add_note", "add_shopping_item", "add_watch_item", "add_calories", "set_priority", "toggle_habit"],
             description: "Rodzaj akcji do wykonania",
           },
           text: { type: "string", description: "Treść zadania / notatki / produktu / tytułu filmu / priorytetu dnia (dla add_todo, add_note, add_shopping_item, add_watch_item, set_priority)" },
+          kcal: { type: "number", description: "Liczba kalorii do dodania (tylko dla add_calories)" },
           habit_id: { type: "string", description: "ID nawyku do odznaczenia (tylko dla toggle_habit, format 'hNN', np. 'h1')" },
         },
         required: ["action"],
@@ -165,6 +166,7 @@ async function readBazaData() {
       zadania: data.todos || [],
       lista_zakupow: data.shoppingList || [],
       lista_filmow_do_obejrzenia: data.watchList || [],
+      kalorie_dzis: data.calories || null,
       nawyki_dzis: data.habits || null,
       streak_dni: data.streak ? data.streak.count : null,
       xp: data.xp || 0,
@@ -204,6 +206,14 @@ async function updateBazaData(args) {
         if (!data.watchList) data.watchList = [];
         data.watchList.unshift({ title: args.text, done: false, id: Date.now() });
         break;
+      case "add_calories": {
+        if (!args.kcal) return "Brak liczby kalorii.";
+        if (!data.calories || data.calories.date !== today) {
+          data.calories = { date: today, kcal: 0, goal: (data.calories && data.calories.goal) || 2500 };
+        }
+        data.calories.kcal = Math.max(0, data.calories.kcal + args.kcal);
+        break;
+      }
       case "set_priority":
         if (!args.text) return "Brak treści priorytetu.";
         data.priority = { text: args.text, date: today };
