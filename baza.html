@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Baza</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14181B">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14181B;
+    --surface:#1C2226;
+    --surface-2:#242B30;
+    --line:#2E363C;
+    --gold:#C9A876;
+    --sage:#6B9C89;
+    --text:#E8E4DB;
+    --text-muted:#848D93;
+    --danger:#B4664F;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); height:100%;}
+  body{ -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
+
+  /* ---------- Gate ---------- */
+  #gate{
+    position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:18px; z-index:100;
+  }
+  #gate .mark{ font-family:var(--font-mono); color:var(--gold); font-size:12px; letter-spacing:.25em; text-transform:uppercase; }
+  #gate input{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    font-family:var(--font-mono); font-size:20px; letter-spacing:.3em; text-align:center;
+    padding:14px 18px; border-radius:8px; width:200px; outline:none;
+  }
+  #gate input:focus{ border-color:var(--gold); }
+  #gate .err{ color:var(--danger); font-size:12px; font-family:var(--font-mono); height:14px; }
+  #gate button{
+    background:var(--gold); color:#14181B; border:none; border-radius:8px; padding:12px 22px;
+    font-family:var(--font-mono); font-weight:600; letter-spacing:.1em; text-transform:uppercase; font-size:12px;
+    cursor:pointer;
+  }
+
+  /* ---------- Shell ---------- */
+  #app{ display:none; max-width:640px; margin:0 auto; min-height:100%; padding:0 16px 90px; }
+  #app.visible{ display:block; }
+
+  header.top{ padding:26px 4px 6px; }
+  .greeting{ font-size:22px; font-weight:600; }
+  .readout{
+    display:flex; align-items:center; gap:10px; margin-top:6px;
+    font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.08em;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--sage); box-shadow:0 0 6px var(--sage); }
+  .dot.off{ background:var(--danger); box-shadow:0 0 6px var(--danger); }
+
+  /* ---------- Gamifikacja (poziom / XP / streak) ---------- */
+  .gami-box{
+    background:linear-gradient(135deg, rgba(107,156,137,0.10), rgba(201,168,118,0.06));
+    border:1px solid var(--sage); border-radius:14px; padding:14px 16px; margin:16px 0;
+    display:flex; align-items:center; gap:14px;
+  }
+  .gami-level{
+    width:46px; height:46px; border-radius:50%; background:var(--surface-2); border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    font-family:var(--font-mono); font-weight:700; font-size:16px; color:var(--gold);
+  }
+  .gami-mid{ flex:1; }
+  .gami-toprow{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+  .gami-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; }
+  .gami-rank{ font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .gami-xp-text{ font-family:var(--font-mono); font-size:10px; color:var(--sage); }
+  .gami-bar{ height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden; }
+  .gami-bar-fill{ height:100%; background:linear-gradient(90deg, var(--sage), var(--gold)); border-radius:3px; transition:width .4s ease; }
+  .gami-streak{
+    display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;
+    font-family:var(--font-mono); padding-left:14px; border-left:1px solid var(--line);
+  }
+  .gami-streak .flame{ font-size:20px; }
+  .gami-streak .snum{ font-size:15px; font-weight:700; color:var(--text); }
+  .gami-streak .slbl{ font-size:8.5px; color:var(--text-muted); letter-spacing:.06em; text-transform:uppercase; }
+
+  /* ---------- Cytat dnia + wczoraj pominięte ---------- */
+  .quote-box{ text-align:center; padding:10px 16px; margin-bottom:14px; font-style:italic; color:var(--text-muted); font-size:12.5px; line-height:1.5; }
+  .missed-box{ background:rgba(180,102,79,0.10); border:1px solid var(--danger); border-radius:12px; padding:12px 16px; margin-bottom:16px; }
+  .missed-box .mb-label{ font-family:var(--font-mono); font-size:10px; color:var(--danger); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+  .missed-box ul{ margin:0; padding-left:18px; font-size:12.5px; color:var(--text); line-height:1.6; }
+  .missed-box .mb-quote{ margin-top:8px; font-style:italic; color:var(--text-muted); font-size:12px; }
+
+  /* ---------- Ikigai ---------- */
+  .ikigai-box{ background:linear-gradient(135deg, rgba(201,168,118,0.10), rgba(107,156,137,0.06)); border:1px solid var(--gold); border-radius:14px; padding:18px 20px; margin-bottom:16px; }
+  .ikigai-q{ margin-bottom:14px; }
+  .ikigai-q:last-child{ margin-bottom:0; }
+  .ikigai-q label{ display:block; font-family:var(--font-mono); font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+  .ikigai-q textarea{ width:100%; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:9px 11px; color:var(--text); font-family:var(--font-sans); font-size:13px; resize:vertical; min-height:44px; box-sizing:border-box; }
+  .ikigai-save{ background:var(--gold); border:none; border-radius:8px; padding:9px 18px; color:#14181B; font-weight:700; font-size:12.5px; cursor:pointer; margin-top:6px; }
+  .ikigai-history{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); margin-top:10px; cursor:pointer; text-decoration:underline; }
+
+  /* ---------- Launcher (hero) ---------- */
+  .launcher-label{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.15em; text-transform:uppercase;
+    margin:26px 2px 10px;
+  }
+  .launcher{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .launch-tile{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px 10px 16px;
+    display:flex; flex-direction:column; align-items:center; gap:10px; text-decoration:none; color:var(--text);
+    position:relative; overflow:hidden; transition:transform .15s ease, border-color .15s ease;
+  }
+  .launch-tile:active{ transform:scale(.96); }
+  .launch-tile:hover{ border-color:var(--gold); }
+
+  /* ---------- Status row (EUR / pogoda / countdown) ---------- */
+  .status-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0 20px; }
+  .status-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 10px;
+    display:flex; flex-direction:column; gap:3px; align-items:flex-start;
+  }
+  .status-card .sc-label{ font-family:var(--font-mono); font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
+  .status-card .sc-value{ font-size:16px; font-weight:700; color:var(--text); }
+  .status-card .sc-sub{ font-size:10px; color:var(--text-muted); line-height:1.4; white-space:normal; }
+
+  /* ---------- Priorytet dnia ---------- */
+  .priority-box{
+    background:linear-gradient(135deg, rgba(201,168,118,0.10), rgba(107,156,137,0.06));
+    border:1px solid var(--gold); border-radius:14px; padding:16px; margin-bottom:20px;
+  }
+  .priority-box .pb-label{ font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+  .priority-box textarea{
+    width:100%; background:transparent; border:none; color:var(--text); font-family:var(--font-sans); font-size:16px;
+    font-weight:600; outline:none; resize:none; min-height:30px; line-height:1.4; padding:0;
+  }
+  .priority-box textarea::placeholder{ color:var(--text-muted); font-weight:400; }
+
+  /* ---------- Nawyki ---------- */
+  .habits-progress{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;
+    font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.05em;
+  }
+  .habits-progress .bar{ flex:1; height:5px; background:var(--surface-2); border-radius:3px; margin:0 10px; overflow:hidden; }
+  .habits-progress .bar-fill{ height:100%; background:var(--sage); border-radius:3px; transition:width .3s ease; }
+  .habit-group-label{
+    font-family:var(--font-mono); font-size:10px; color:var(--gold); letter-spacing:.15em; text-transform:uppercase;
+    margin:20px 2px 8px;
+  }
+  .habit-group-label:first-child{ margin-top:0; }
+  .habit-row{
+    display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:pointer; transition:opacity .15s;
+  }
+  .habit-row input[type="checkbox"]{ width:20px; height:20px; flex-shrink:0; cursor:pointer; accent-color:var(--sage); }
+  .habit-row .h-text{ font-size:13.5px; }
+  .habit-row.done{ opacity:.5; }
+  .habit-row.done .h-text{ text-decoration:line-through; color:var(--text-muted); }
+  .habit-row.failed{ border-left:3px solid var(--danger); background:rgba(180,102,79,0.06); }
+  @keyframes checkPop{ 0%{transform:scale(1);} 40%{transform:scale(1.15);} 100%{transform:scale(1);} }
+  .habit-row.just-checked{ animation:checkPop .3s ease; }
+  @keyframes levelFlash{ 0%{transform:scale(1);} 50%{transform:scale(1.25); box-shadow:0 0 20px var(--gold);} 100%{transform:scale(1);} }
+  .gami-level.level-up{ animation:levelFlash .6s ease; }
+  @keyframes confettiFall{ 0%{transform:translateY(-10px) rotate(0deg); opacity:1;} 100%{transform:translateY(300px) rotate(360deg); opacity:0;} }
+  .confetti-piece{ position:fixed; top:0; width:8px; height:8px; z-index:999; pointer-events:none; animation:confettiFall 1.4s ease-in forwards; }
+
+  /* ---------- Heatmapa nawyków ---------- */
+  .heatmap-box{ margin:22px 0; }
+  .heatmap-label{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+  .heatmap-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(11px, 1fr)); gap:3px; }
+  .heatmap-cell{ width:100%; aspect-ratio:1; border-radius:2px; background:var(--surface-2); }
+  .heatmap-cell[data-lvl="1"]{ background:#2d4a3f; }
+  .heatmap-cell[data-lvl="2"]{ background:#3f6b58; }
+  .heatmap-cell[data-lvl="3"]{ background:#57937a; }
+  .heatmap-cell[data-lvl="4"]{ background:var(--sage); }
+
+  /* ---------- Kalendarz ---------- */
+  .cal-box{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+  .cal-connect{ background:var(--gold); border:none; border-radius:8px; padding:10px 16px; color:#14181B; font-weight:700; font-size:12.5px; cursor:pointer; width:100%; }
+  .cal-event{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .cal-event:last-child{ border-bottom:none; }
+  .cal-event .ce-date{ color:var(--sage); font-family:var(--font-mono); font-size:10.5px; }
+
+  /* ---------- ActivityWatch ---------- */
+  .aw-box{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+  .aw-total{ font-size:22px; font-weight:700; color:var(--sage); margin:6px 0; }
+  .aw-app-row{ display:flex; justify-content:space-between; padding:5px 0; font-size:12.5px; border-bottom:1px solid var(--line); }
+  .aw-app-row:last-child{ border-bottom:none; }
+  .aw-app-row .aw-time{ color:var(--text-muted); font-family:var(--font-mono); font-size:11px; }
+
+  /* ---------- Licznik wody ---------- */
+  .water-box{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:18px;
+  }
+  .water-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .water-label{ font-family:var(--font-mono); font-size:10px; color:var(--sage); letter-spacing:.12em; text-transform:uppercase; }
+  .water-amount{ font-family:var(--font-mono); font-size:13px; color:var(--text); }
+  .water-bar{ height:8px; background:var(--surface-2); border-radius:4px; overflow:hidden; margin-bottom:12px; }
+  .water-bar-fill{ height:100%; background:linear-gradient(90deg, #4A7A8C, var(--sage)); border-radius:4px; transition:width .3s ease; }
+  .water-actions{ display:flex; gap:8px; }
+  .water-btn{
+    flex:1; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 0; font-size:12.5px; font-weight:600; cursor:pointer; font-family:var(--font-sans);
+  }
+  .water-btn:active{ transform:scale(.96); }
+  .water-btn.minus{ flex:0 0 44px; color:var(--text-muted); }
+
+  .launch-tile .glyph{
+    width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:20px;
+  }
+  .launch-tile .lbl{ font-size:12.5px; font-weight:600; text-align:center; line-height:1.25; }
+  .launch-tile .sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); letter-spacing:.06em; text-transform:uppercase; }
+  .tile-drive .glyph{ background:rgba(107,156,137,0.16); color:var(--sage); }
+  .tile-crm .glyph{ background:rgba(201,168,118,0.16); color:var(--gold); }
+  .tile-tasks .glyph{ background:rgba(180,102,79,0.16); color:#D68F73; }
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:4px; gap:4px;
+    position:sticky; top:12px; z-index:10; margin:26px 0 16px;
+  }
+  .tab{
+    flex:1; text-align:center; padding:9px 0; border-radius:7px; font-family:var(--font-mono);
+    font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); cursor:pointer; user-select:none;
+  }
+  .tab.active{ background:var(--surface-2); color:var(--gold); }
+
+  section.panel{ display:none; }
+  section.panel.active{ display:block; }
+
+  /* ---------- Links (edytowalne) ---------- */
+  .links-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .link-tile{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:8px; text-decoration:none; color:var(--text);
+    position:relative;
+  }
+  .link-tile .ic{ font-size:20px; }
+  .link-tile .lbl{ font-size:11px; text-align:center; color:var(--text-muted); line-height:1.3; }
+  .link-tile .rm{ position:absolute; top:4px; right:6px; color:var(--text-muted); font-size:14px; opacity:.5; }
+  .add-tile{
+    background:transparent; border:1px dashed var(--line); border-radius:12px; padding:16px 8px;
+    display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:22px; cursor:pointer;
+    min-height:74px;
+  }
+
+  /* ---------- Notes (schowek na myśli) ---------- */
+  .note-add{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:14px; }
+  .note-add textarea{
+    width:100%; background:transparent; border:none; color:var(--text); font-family:var(--font-sans); font-size:13.5px;
+    outline:none; resize:vertical; min-height:60px; line-height:1.5;
+  }
+  .note-add .save-row{ display:flex; justify-content:flex-end; margin-top:6px; }
+  .note-add .save-row button{
+    background:var(--gold); border:none; border-radius:7px; padding:7px 16px; color:#14181B; font-weight:700;
+    font-size:12px; cursor:pointer;
+  }
+  .note{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:10px; }
+  .note .nhead{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+  .note .del{ color:var(--text-muted); font-size:15px; cursor:pointer; flex-shrink:0; }
+  .note .nbody{ font-size:13.5px; line-height:1.55; white-space:pre-wrap; color:var(--text); }
+  .note .ndate{ font-family:var(--font-mono); font-size:10px; color:var(--text-muted); }
+
+  .empty{ color:var(--text-muted); font-size:13px; text-align:center; padding:30px 0; font-family:var(--font-mono); }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--surface-2); border:1px solid var(--line); color:var(--text); padding:10px 18px; border-radius:20px;
+    font-family:var(--font-mono); font-size:12px; transition:.25s; pointer-events:none; z-index:50; white-space:nowrap;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  ::selection{ background:var(--gold); color:#14181B; }
+
+  /* ---------- Wersja desktopowa (szersza) — telefon zostaje bez zmian ---------- */
+  @media (min-width: 900px){
+    #app{ max-width:1040px; padding:0 32px 90px; }
+    .launcher{ grid-template-columns:repeat(6,1fr) !important; }
+    .status-row{ grid-template-columns:repeat(3,1fr); }
+    header.top{ padding-top:36px; }
+    .gami-box{ padding:18px 22px; }
+    .habits-progress .bar{ margin:0 16px; }
+    .heatmap-grid{ grid-template-columns:repeat(auto-fill, minmax(13px, 1fr)); }
+    .note{ padding:16px 18px; }
+    .stretch-card, .ex-card{ padding:18px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="mark">◆ BAZA — DOSTĘP</div>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
+  <div class="err" id="gateErr"></div>
+  <button onclick="tryUnlock()">Odblokuj</button>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="greeting" id="greeting">Cześć.</div>
+    <div class="readout"><span class="dot" id="syncDot"></span><span id="syncTxt">SYNC OK</span><span id="clock" style="margin-left:auto"></span></div>
+    <button id="notifyBtn" onclick="enablePush()" style="margin-top:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--text-muted);border-radius:8px;padding:8px 14px;font-family:var(--font-mono);font-size:11px;cursor:pointer;letter-spacing:.05em">🔔 Włącz powiadomienia</button>
+  </header>
+
+  <div class="quote-box" id="quoteBox"></div>
+  <div class="missed-box" id="missedBox" style="display:none">
+    <div class="mb-label">◆ Wczoraj pominięte</div>
+    <ul id="missedList"></ul>
+    <div class="mb-quote" id="missedQuote"></div>
+  </div>
+
+  <div class="ikigai-box" id="ikigaiBox" style="display:none">
+    <div class="mb-label" style="color:var(--gold)">◆ Ikigai — refleksja miesiąca</div>
+    <div id="ikigaiForm"></div>
+  </div>
+
+  <div class="gami-box">
+    <div class="gami-level" id="gamiLevel">1</div>
+    <div class="gami-mid">
+      <div class="gami-toprow">
+        <span class="gami-label">Poziom</span>
+        <span class="gami-rank" id="gamiRank">Brąz</span>
+        <span class="gami-xp-text" id="gamiXpText">0 / 100 XP</span>
+      </div>
+      <div class="gami-bar"><div class="gami-bar-fill" id="gamiBarFill" style="width:0%"></div></div>
+    </div>
+    <div class="gami-streak">
+      <span class="flame">🔥</span>
+      <span class="snum" id="gamiStreak">0</span>
+      <span class="slbl">dni</span>
+    </div>
+  </div>
+
+  <div class="launcher-label">◆ Start tutaj</div>
+  <div class="launcher" style="grid-template-columns:repeat(3,1fr)">
+    <a class="launch-tile tile-drive" href="https://drive.google.com/drive/folders/18nLqq6sm6Vs5KomdBZFv2Z36UJAu7zM6?usp=sharing" target="_blank" rel="noopener">
+      <div class="glyph">📁</div>
+      <div class="lbl">Drive</div>
+      <div class="sub">Dokumenty</div>
+    </a>
+    <a class="launch-tile tile-crm" href="https://www.sklepzastodola.pl/panel.html" target="_blank" rel="noopener">
+      <div class="glyph">💼</div>
+      <div class="lbl">Panel</div>
+      <div class="sub">CRM</div>
+    </a>
+    <a class="launch-tile tile-tasks" href="https://claude.ai" target="_blank" rel="noopener">
+      <div class="glyph">✨</div>
+      <div class="lbl">Claude</div>
+      <div class="sub">Chat / appka</div>
+    </a>
+    <a class="launch-tile" href="https://web.whatsapp.com" target="_blank" rel="noopener" onclick="return openApp(event, 'whatsapp://', 'https://web.whatsapp.com')">
+      <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">💬</div>
+      <div class="lbl">WhatsApp</div>
+      <div class="sub">Appka</div>
+    </a>
+    <a class="launch-tile" href="https://www.messenger.com" target="_blank" rel="noopener" onclick="return openApp(event, 'fb-messenger://', 'https://www.messenger.com')">
+      <div class="glyph" style="background:rgba(74,122,140,0.16);color:#4A7A8C">💬</div>
+      <div class="lbl">Messenger</div>
+      <div class="sub">Appka</div>
+    </a>
+    <a class="launch-tile" href="http://localhost:5600" target="_blank" rel="noopener" style="border-color:var(--line)">
+      <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">⏱️</div>
+      <div class="lbl">Aktywność</div>
+      <div class="sub">Tylko na tym PC</div>
+    </a>
+  </div>
+
+  <div class="status-row">
+    <div class="status-card">
+      <span class="sc-label">EUR/PLN</span>
+      <span class="sc-value" id="eurValue">—</span>
+      <span class="sc-sub" id="eurDate">ładowanie…</span>
+    </div>
+    <div class="status-card" style="grid-column:span 1">
+      <span class="sc-label">Tarnowskie Góry</span>
+      <span class="sc-value" id="weatherValue">—</span>
+      <span class="sc-sub" id="weatherSub">ładowanie…</span>
+      <span class="sc-sub" id="weatherExtra"></span>
+    </div>
+    <div class="status-card">
+      <span class="sc-label">Mlekomat #1</span>
+      <span class="sc-value" id="countdownValue">—</span>
+      <span class="sc-sub">do startu</span>
+    </div>
+  </div>
+
+  <div class="priority-box">
+    <div class="pb-label">◆ Priorytet dnia</div>
+    <textarea id="priorityInput" placeholder="Jedna najważniejsza rzecz na dziś…" rows="1" oninput="autoResize(this)"></textarea>
+  </div>
+
+  <div class="note-add">
+    <div class="pb-label" style="color:var(--sage)">◆ Szybki zapis</div>
+    <textarea id="captureInput" placeholder="Wpisz myśl, notatkę albo zadanie…"></textarea>
+    <div class="save-row" style="gap:8px">
+      <button onclick="captureAsTodo()" style="background:var(--surface-2);color:var(--text);border:1px solid var(--line)">✅ Do zrobienia</button>
+      <button onclick="captureAsNote()">📝 Notatka</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="habits">Nawyki</div>
+    <div class="tab" data-tab="todos">Do zrobienia</div>
+    <div class="tab" data-tab="shopping">Zakupy</div>
+    <div class="tab" data-tab="watch">Filmy</div>
+    <div class="tab" data-tab="notes">Notatki</div>
+    <div class="tab" data-tab="links">Linki</div>
+  </div>
+
+  <section class="panel active" id="panel-habits">
+    <div class="water-box">
+      <div class="water-top">
+        <span class="water-label">💧 Nawodnienie</span>
+        <span class="water-amount" id="waterAmount">0 / 2000 ml</span>
+      </div>
+      <div class="water-bar"><div class="water-bar-fill" id="waterBarFill" style="width:0%"></div></div>
+      <div class="water-actions">
+        <button class="water-btn minus" onclick="addWater(-250)">−</button>
+        <button class="water-btn" onclick="addWater(250)">+ Szklanka (250ml)</button>
+        <button class="water-btn" onclick="addWater(500)">+ Butelka (500ml)</button>
+      </div>
+    </div>
+
+    <div class="cal-box" id="calBox">
+      <div class="water-top">
+        <span class="water-label">📅 Kalendarz</span>
+      </div>
+      <div id="calContent">Ładowanie…</div>
+      <div id="calAddForm" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+        <input type="text" id="calTitle" placeholder="Tytuł wydarzenia" style="width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--font-sans);font-size:13px;margin-bottom:6px;box-sizing:border-box">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input type="date" id="calDate" style="flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--font-sans);font-size:12.5px">
+          <input type="time" id="calTime" style="flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--font-sans);font-size:12.5px">
+        </div>
+        <button class="water-btn" onclick="addCalendarEvent()" style="width:100%">+ Dodaj do kalendarza</button>
+      </div>
+    </div>
+
+    <div class="aw-box" id="awBox">
+      <div class="water-top">
+        <span class="water-label">⏱️ Aktywność (ten PC)</span>
+      </div>
+      <div id="awContent">Ładowanie…</div>
+    </div>
+    <div id="habitsProgress" class="habits-progress"></div>
+    <div style="text-align:right;margin-bottom:12px">
+      <span onclick="resetTodayHabits()" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);cursor:pointer;text-decoration:underline">Resetuj dzisiejszy dzień</span>
+    </div>
+    <div class="heatmap-box">
+      <div class="heatmap-label">◆ Ostatnie 12 tygodni</div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+    </div>
+    <div id="habitsList"></div>
+  </section>
+
+  <section class="panel" id="panel-todos">
+    <div id="todosList"></div>
+  </section>
+
+  <section class="panel" id="panel-shopping">
+    <div class="note-add" style="margin-bottom:14px">
+      <input type="text" id="shoppingInput" placeholder="Dodaj produkt…" style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-sans);font-size:13.5px;outline:none" onkeydown="if(event.key==='Enter') addShoppingItem()">
+      <div class="save-row"><button onclick="addShoppingItem()">+ Dodaj</button></div>
+    </div>
+    <div id="shoppingList"></div>
+  </section>
+
+  <section class="panel" id="panel-watch">
+    <div class="note-add" style="margin-bottom:14px">
+      <input type="text" id="watchInput" placeholder="Dodaj tytuł filmu…" style="width:100%;background:transparent;border:none;color:var(--text);font-family:var(--font-sans);font-size:13.5px;outline:none" onkeydown="if(event.key==='Enter') addWatchItem()">
+      <div class="save-row"><button onclick="addWatchItem()">+ Dodaj</button></div>
+    </div>
+    <div id="watchList"></div>
+  </section>
+
+  <section class="panel" id="panel-notes">
+    <div id="notesList"></div>
+  </section>
+
+  <section class="panel" id="panel-links">
+    <div class="links-grid" id="linksGrid"></div>
+  </section>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   KONFIGURACJA
+   Klucz jsonbin.io NIE jest już tutaj — leży bezpiecznie jako
+   zmienna środowiskowa na Vercel (JSONBIN_BIN_ID, JSONBIN_API_KEY),
+   używana przez /api/baza-data.js po stronie serwera.
+   ========================================================= */
+const CONFIG = {
+  PIN: "5855"
+};
+
+const API = '/api/baza-data';
+
+let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text:"", date:"" }, habits: { date:"", done:{} }, habitHistory: {}, xp: 0, streak: { count:0, lastCompleteDate:"" }, pushSubscriptions: [], water: { date:"", ml:0 }, ikigai: {}, watchList: [
+  { id:1, title:'The psychology of playing safe', done:false },
+  { id:2, title:'How to get Whatever you want', done:false },
+  { id:3, title:'The Desire to be Great', done:false },
+  { id:4, title:'57 Years Apart - a Boy and a Man Talk About Life', done:false },
+  { id:5, title:'Nothing changes if nothing changes', done:false },
+  { id:6, title:'When you stop caring, everything falls into place', done:false },
+  { id:7, title:'The beauty of losing yourself', done:false },
+  { id:8, title:'When Cartoon characters tried to tell us something', done:false },
+  { id:9, title:'The speech that brought this entire school to tears', done:false },
+  { id:10, title:'How to become a monster', done:false },
+  { id:11, title:'The mind of a Winner', done:false },
+  { id:12, title:'For those who are alone', done:false },
+  { id:13, title:'The goal is to experience', done:false },
+  { id:14, title:"Why didnt u cry?", done:false },
+  { id:15, title:'Birds do not sign in caves', done:false },
+] };
+let saveTimer = null;
+let priorityTimer = null;
+
+/* ---------- Gate ---------- */
+function tryUnlock(){
+  const val = document.getElementById('pinInput').value;
+  if(val === CONFIG.PIN){
+    sessionStorage.setItem('baza_unlocked','1');
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').classList.add('visible');
+    boot();
+  } else {
+    document.getElementById('gateErr').textContent = 'Zły PIN';
+    document.getElementById('pinInput').value='';
+  }
+}
+document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+if(sessionStorage.getItem('baza_unlocked')==='1'){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  window.addEventListener('DOMContentLoaded', boot);
+}
+
+/* ---------- Boot ---------- */
+function boot(){
+  setGreeting();
+  tickClock();
+  setInterval(tickClock, 1000);
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>switchTab(t.dataset.tab)));
+  loadData();
+  loadEurRate();
+  loadWeather();
+  renderCountdown();
+  loadCalendar();
+  loadActivityWatch();
+  document.getElementById('priorityInput').addEventListener('input', e=>{
+    clearTimeout(priorityTimer);
+    priorityTimer = setTimeout(()=>savePriority(e.target.value), 500);
+  });
+}
+
+/* ---------- EUR/PLN (NBP API) ---------- */
+async function loadEurRate(){
+  try{
+    const res = await fetch('https://api.nbp.pl/api/exchangerates/rates/a/eur/?format=json');
+    const json = await res.json();
+    const rate = json.rates[0].mid;
+    document.getElementById('eurValue').textContent = rate.toFixed(4) + ' zł';
+    document.getElementById('eurDate').textContent = 'kurs NBP ' + json.rates[0].effectiveDate;
+  }catch(e){
+    document.getElementById('eurValue').textContent = '—';
+    document.getElementById('eurDate').textContent = 'brak danych';
+  }
+}
+
+/* ---------- Pogoda Katowice (Open-Meteo) ---------- */
+const WMO_LABELS = {
+  0:'Bezchmurnie', 1:'Prawie bezchmurnie', 2:'Częściowo pochmurno', 3:'Pochmurno',
+  45:'Mgła', 48:'Mgła szronowa', 51:'Mżawka', 53:'Mżawka', 55:'Mżawka',
+  61:'Deszcz', 63:'Deszcz', 65:'Silny deszcz', 71:'Śnieg', 73:'Śnieg', 75:'Silny śnieg',
+  80:'Przelotny deszcz', 81:'Przelotny deszcz', 82:'Ulewa', 95:'Burza', 96:'Burza z gradem'
+};
+async function loadWeather(){
+  try{
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.4468&longitude=18.8628&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&timezone=Europe/Warsaw');
+    const json = await res.json();
+    const c = json.current;
+    const temp = Math.round(c.temperature_2m);
+    const feels = Math.round(c.apparent_temperature);
+    const label = WMO_LABELS[c.weather_code] || 'Zmiennie';
+    document.getElementById('weatherValue').textContent = temp + '°C';
+    document.getElementById('weatherSub').textContent = label + ' · odczuwalna ' + feels + '°C';
+    const extraBits = [];
+    extraBits.push('💨 ' + Math.round(c.wind_speed_10m) + ' km/h');
+    extraBits.push('💧 ' + Math.round(c.relative_humidity_2m) + '%');
+    if(c.precipitation > 0) extraBits.push('🌧 ' + c.precipitation.toFixed(1) + 'mm');
+    document.getElementById('weatherExtra').textContent = extraBits.join('  ·  ');
+  }catch(e){
+    document.getElementById('weatherValue').textContent = '—';
+    document.getElementById('weatherSub').textContent = 'brak danych';
+  }
+}
+
+/* ---------- Countdown do pierwszego mlekomatu ---------- */
+function renderCountdown(){
+  const target = new Date('2026-08-01T00:00:00');
+  const now = new Date();
+  const diffDays = Math.ceil((target - now) / 86400000);
+  document.getElementById('countdownValue').textContent = diffDays > 0 ? diffDays + ' dni' : 'start!';
+}
+
+/* ---------- Priorytet dnia ---------- */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- Nawyki ---------- */
+const HABITS = [
+  // RANO — budzik 7:00
+  { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min', time:'7:00' },
+  { id:'h5', period:'Rano', text:'Otworzenie okna / naturalne światło od razu po wstaniu', time:'7:02' },
+  { id:'h2', period:'Rano', text:'Szklanka wody po przebudzeniu (przed kawą)', time:'7:05' },
+  { id:'h6', period:'Rano', text:'Spacer bez słuchawek, najlepiej z kawą na świeżym powietrzu (5-10 min)', time:'7:10' },
+  { id:'h4', period:'Rano', text:'Zasłanie łóżka — pierwszy zaliczony punkt dnia', time:'7:20' },
+  { id:'h40', period:'Rano', text:'Zimny prysznic (opcjonalnie — nie dla każdego)', time:'7:25' },
+  { id:'h7', period:'Rano', text:'Rozciąganie klatki i pleców (2 min)', guide:'poradnik-rozciaganie.html', time:'7:35' },
+  { id:'h8', period:'Rano', text:'10 przysiadów albo 10 pompek przy ścianie', guide:'poradnik-nawyki.html#przysiady-pompki', time:'7:40' },
+  { id:'h10', period:'Rano', text:'Śniadanie + ew. kawa czarna', time:'7:45' },
+  { id:'h41', period:'Rano', text:'E-papieros — dopiero teraz, nie wcześniej', time:'7:50' },
+  { id:'h3', period:'Rano', text:'Mycie twarzy + zębów (po śniadaniu)', time:'7:55' },
+  { id:'h9', period:'Rano', text:'Krótki plan dnia: 3 najważniejsze rzeczy', time:'8:00' },
+  // DZIEŃ
+  { id:'h11', period:'Dzień', text:'Wypij wodę do południa', time:'do 12:00' },
+  { id:'h12', period:'Dzień', text:'Wstań i przejdź się (co godzinę)', time:'co godzinę' },
+  { id:'h13', period:'Dzień', text:'Zasada 20-20-20 (oczy co 20 min)', guide:'poradnik-nawyki.html#20-20-20', time:'co 20 min' },
+  { id:'h14', period:'Dzień', text:'Sprawdzenie postawy: barki w tył, szyja luźna', guide:'poradnik-nawyki.html#postawa', time:'na bieżąco' },
+  { id:'h15', period:'Dzień', text:'Izometria dłoni na ścianie (60 sek.)', guide:'poradnik-nawyki.html#izometria', time:'~15:00' },
+  { id:'h17', period:'Dzień', text:'1 porcja warzyw lub owoców', time:'13:00' },
+  { id:'h16', period:'Dzień', text:'5 minut spaceru po jedzeniu', time:'13:15' },
+  { id:'h18', period:'Dzień', text:'Trening (Push/Pull/Nogi)', guide:'trening.html', days:[1,2,3,5,6], time:'18:00' },
+  { id:'h19', period:'Dzień', text:'Shake białkowy', days:[2,4,6], time:'18:30' },
+  { id:'h37', period:'Dzień', text:'Dawka leku (medyczna marihuana)', time:'18:30' },
+  { id:'h20', period:'Dzień', text:'5 minut porządków przy biurku', time:'17:30' },
+  { id:'h21', period:'Dzień', text:'1 głęboki oddech / minuta ciszy w ciągu dnia', guide:'poradnik-nawyki.html#oddech', time:'~15:30' },
+  { id:'h42', period:'Dzień', text:'Zero cukru dzisiaj (wyzwanie: miesiąc bez cukru)', time:'cały dzień' },
+  { id:'h43', period:'Dzień', text:'3 minuty medytacji', time:'~16:00' },
+  // WIECZÓR — telefon offline 22:00, sen 23:00
+  { id:'h39', period:'Wieczór', text:'Czytanie książki (1h)', time:'19:00' },
+  { id:'h26', period:'Wieczór', text:'Przygotowanie rzeczy na jutro', time:'21:00' },
+  { id:'h22', period:'Wieczór', text:'15-20 min czytania / nauki', time:'21:15' },
+  { id:'h38', period:'Wieczór', text:'Dawka leku (medyczna marihuana)', time:'21:30' },
+  { id:'h25', period:'Wieczór', text:'Rozciąganie spokojne (3-5 min)', time:'21:40' },
+  { id:'h27', period:'Wieczór', text:'Krótki przegląd dnia: 3 zdania', time:'21:50' },
+  { id:'h28', period:'Wieczór', text:'1 rzecz, z której jesteś zadowolony', time:'21:55' },
+  { id:'h24', period:'Wieczór', text:'Blok bez telefonu przed snem', time:'22:00' },
+  { id:'h23', period:'Wieczór', text:'Mycie twarzy + zębów', time:'22:10' },
+  { id:'h30', period:'Wieczór', text:'Zgaś mocne światła 30 min przed snem', time:'22:30' },
+  { id:'h31', period:'Wieczór', text:'5 min ciszy / oddechu przed snem', time:'22:50' },
+  { id:'h29', period:'Wieczór', text:'Stała pora snu (22:00)', time:'23:00' },
+  // SPORT
+  { id:'h32', period:'Sport', text:'1 krótki spacer dziennie' },
+  { id:'h33', period:'Sport', text:'1 mini-seria ruchu: przysiady, pompki, plank', guide:'poradnik-nawyki.html#plank' },
+  { id:'h34', period:'Sport', text:'1 dzień bez długiego siedzenia bez przerw' },
+  { id:'h35', period:'Sport', text:'Notatka o energii: jak się czułeś po ruchu' },
+  { id:'h36', period:'Sport', text:'1 mały cel tygodniowy (np. 3 treningi, 5 spacerów)' },
+];
+const PERIODS = ['Rano', 'Dzień', 'Wieczór', 'Sport'];
+
+function getTodayHabits(){
+  const dow = new Date().getDay(); // 0=Nd,1=Pon,...6=Sob
+  return HABITS.filter(h => !h.days || h.days.includes(dow));
+}
+
+function renderHeatmap(){
+  const grid = document.getElementById('heatmapGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  const days = 84; // 12 tygodni
+  const today = new Date();
+  for(let i = days - 1; i >= 0; i--){
+    const d = new Date(today.getTime() - i * 86400000);
+    const key = d.toISOString().slice(0,10);
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    cell.title = key;
+
+    let record = DATA.habitHistory ? DATA.habitHistory[key] : null;
+    if(key === todayStr()){
+      const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+      record = { done: doneCount, total: getTodayHabits().length };
+    }
+    if(record && record.total > 0){
+      const pct = record.done / record.total;
+      let lvl = 0;
+      if(pct >= 1) lvl = 4;
+      else if(pct >= 0.66) lvl = 3;
+      else if(pct >= 0.33) lvl = 2;
+      else if(pct > 0) lvl = 1;
+      if(lvl > 0) cell.setAttribute('data-lvl', lvl);
+      cell.title = `${key}: ${record.done}/${record.total}`;
+    }
+    grid.appendChild(cell);
+  }
+}
+const DAILY_QUOTES = [
+  "Dyskomfort dzisiaj to waluta, którą kupujesz siebie z jutra.",
+  "Nikt nie przyjdzie zrobić tego za ciebie. To zawsze byłeś tylko ty.",
+  "Ciało zapomina wymówki szybciej niż umysł je wymyśla.",
+  "Rób to, na co nie masz ochoty — właśnie wtedy się liczy.",
+  "Świat nie czeka, aż będziesz gotowy. Zacznij niegotowy.",
+  "Wygoda jest cichym złodziejem — kradnie powoli, nie zauważysz kiedy.",
+  "Trudność nie jest przeszkodą na drodze. Trudność jest drogą.",
+  "To, co dziś wydaje się ciężarem, jutro będzie fundamentem.",
+  "Nie musisz czuć motywacji. Musisz tylko zacząć ruch.",
+  "Umysł podda się na długo przed ciałem — jeśli mu na to pozwolisz.",
+  "Codzienna dyscyplina nie krzyczy. Buduje po cichu, dzień po dniu.",
+  "Wymówka, którą akceptujesz dzisiaj, wraca jutro silniejsza.",
+  "Nie ścigasz się z nikim. Ścigasz się z wersją siebie sprzed roku.",
+  "Ból wysiłku mija. Ból żalu zostaje.",
+  "Zrób to zmęczony. Zrób to bez ochoty. Po prostu zrób.",
+  "Charakter buduje się w momentach, których nikt nie widzi.",
+  "Łatwa droga prowadzi tam, gdzie już byłeś.",
+  "Twoje granice są tam, gdzie umysł powiedział 'dość' — nie ciało.",
+  "Konsekwencja bije talent, który się nie pojawia.",
+  "To nie jest dzień na wymówki. Żaden dzień nie jest.",
+  "Rób mały krok, kiedy nie widzisz całej drogi.",
+  "Silni nie czują się silni każdego dnia. Po prostu działają mimo to.",
+  "Jutro podziękujesz sobie za to, co zrobiłeś dzisiaj wbrew sobie.",
+  "Nie czekaj na idealny moment. On nie istnieje.",
+  "Zmiana zaczyna się w chwili, gdy przestajesz negocjować z samym sobą.",
+  "Twoje nawyki dzisiaj piszą historię, którą przeczytasz za rok.",
+  "Nikt nie zobaczy powtórzenia numer siedem. Ale ty je poczujesz.",
+  "Bądź twardszy dla siebie niż świat musi być.",
+  "Droga na skróty prowadzi donikąd, tylko wolniej to zauważysz.",
+  "Dyscyplina to wolność — od żalu, od wymówek, od siebie z wczoraj.",
+];
+
+function getTodayQuote(){
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+}
+function habitsForDate(dateObj){
+  const dow = dateObj.getDay();
+  return HABITS.filter(h => !h.days || h.days.includes(dow));
+}
+
+function ensureHabitsToday(){
+  if(!DATA.habits) DATA.habits = { date:"", done:{} };
+  if(!DATA.habitHistory) DATA.habitHistory = {};
+  if(DATA.habits.date && DATA.habits.date !== todayStr()){
+    const oldDate = new Date(DATA.habits.date + 'T12:00:00');
+    const oldHabits = habitsForDate(oldDate);
+    const doneCount = oldHabits.filter(h => DATA.habits.done[h.id]).length;
+    DATA.habitHistory[DATA.habits.date] = { done: doneCount, total: oldHabits.length };
+
+    const missed = oldHabits.filter(h => !DATA.habits.done[h.id]).map(h => h.text);
+    DATA.yesterdayMissed = { date: DATA.habits.date, missed };
+  }
+  if(DATA.habits.date !== todayStr()){
+    DATA.habits = { date: todayStr(), done: {} };
+  }
+}
+
+/* ---------- Woda ---------- */
+const WATER_GOAL = 2000;
+function ensureWaterToday(){
+  if(!DATA.water) DATA.water = { date:"", ml:0 };
+  if(DATA.water.date !== todayStr()){
+    DATA.water = { date: todayStr(), ml:0 };
+  }
+}
+function addWater(amount){
+  ensureWaterToday();
+  DATA.water.ml = Math.max(0, DATA.water.ml + amount);
+  renderWater();
+  queueSave();
+}
+async function loadActivityWatch(){
+  const box = document.getElementById('awContent');
+  const AW = 'http://localhost:5600';
+  try{
+    const bucketsRes = await fetch(`${AW}/api/0/buckets/`);
+    const buckets = await bucketsRes.json();
+    const windowBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-window'));
+    const afkBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-afk'));
+    const webBucketId = Object.keys(buckets).find(k => k.startsWith('aw-watcher-web'));
+
+    if(!windowBucketId || !afkBucketId){
+      box.innerHTML = '<div class="empty" style="padding:6px 0">ActivityWatch nie znaleziony na tym urządzeniu</div>';
+      return;
+    }
+
+    const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+    const params = `start=${startOfDay.toISOString()}&end=${new Date().toISOString()}`;
+
+    const afkRes = await fetch(`${AW}/api/0/buckets/${afkBucketId}/events?${params}&limit=-1`);
+    const afkEvents = await afkRes.json();
+    const activeSeconds = afkEvents.filter(e => e.data.status === 'not-afk').reduce((s,e)=>s+e.duration, 0);
+
+    const winRes = await fetch(`${AW}/api/0/buckets/${windowBucketId}/events?${params}&limit=-1`);
+    const winEvents = await winRes.json();
+    const appTotals = {};
+    winEvents.forEach(e => {
+      const app = e.data.app || 'Nieznane';
+      appTotals[app] = (appTotals[app] || 0) + e.duration;
+    });
+    const topApps = Object.entries(appTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    let topSites = [];
+    if(webBucketId){
+      const webRes = await fetch(`${AW}/api/0/buckets/${webBucketId}/events?${params}&limit=-1`);
+      const webEvents = await webRes.json();
+      const siteTotals = {};
+      webEvents.forEach(e => {
+        let domain = 'nieznana strona';
+        try{ domain = new URL(e.data.url).hostname.replace('www.',''); }catch(err){}
+        siteTotals[domain] = (siteTotals[domain] || 0) + e.duration;
+      });
+      topSites = Object.entries(siteTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    }
+
+    const fmtTime = sec => {
+      const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
+
+    let html = `<div class="aw-total">${fmtTime(activeSeconds)}</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">aktywności dziś</div>`;
+    html += `<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Top aplikacje</div>`;
+    html += topApps.map(([app,sec]) => `<div class="aw-app-row"><span>${escapeHtml(app)}</span><span class="aw-time">${fmtTime(sec)}</span></div>`).join('');
+
+    if(topSites.length > 0){
+      html += `<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px">Top strony</div>`;
+      html += topSites.map(([site,sec]) => `<div class="aw-app-row"><span>${escapeHtml(site)}</span><span class="aw-time">${fmtTime(sec)}</span></div>`).join('');
+    }
+
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = '<div class="empty" style="padding:6px 0">Niedostępne na tym urządzeniu</div>';
+  }
+}
+async function loadCalendar(){
+  const box = document.getElementById('calContent');
+  const form = document.getElementById('calAddForm');
+  try{
+    const res = await fetch('/api/calendar-events');
+    const json = await res.json();
+    if(!json.connected){
+      box.innerHTML = '<button class="cal-connect" onclick="window.open(\'/api/google-auth-start\',\'_blank\')">Połącz Google Calendar</button>';
+      form.style.display = 'none';
+      return;
+    }
+    form.style.display = 'block';
+    document.getElementById('calDate').value = todayStr();
+    if(json.events.length === 0){
+      box.innerHTML = '<div class="empty" style="padding:10px 0">Brak wydarzeń w najbliższych 7 dniach</div>';
+      return;
+    }
+    box.innerHTML = json.events.map(ev => {
+      const d = new Date(ev.start);
+      const dateStr = ev.allDay
+        ? d.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit'})
+        : d.toLocaleDateString('pl-PL', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'});
+      return `<div class="cal-event"><span>${escapeHtml(ev.title)}</span><span class="ce-date">${dateStr}</span></div>`;
+    }).join('');
+  }catch(e){
+    box.innerHTML = '<div class="empty" style="padding:10px 0">Błąd ładowania kalendarza</div>';
+  }
+}
+
+async function addCalendarEvent(){
+  const title = document.getElementById('calTitle').value.trim();
+  const date = document.getElementById('calDate').value;
+  const time = document.getElementById('calTime').value;
+  if(!title || !date){ showToast('Podaj tytuł i datę'); return; }
+
+  try{
+    const res = await fetch('/api/calendar-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, date, time })
+    });
+    const json = await res.json();
+    if(json.error){ showToast('Błąd: ' + json.error); return; }
+    document.getElementById('calTitle').value = '';
+    document.getElementById('calTime').value = '';
+    showToast('Dodano do kalendarza');
+    loadCalendar();
+  }catch(e){
+    showToast('Błąd zapisu');
+  }
+}
+
+const IKIGAI_QUESTIONS = [
+  { key:'kocham', label:'Co kocham robić?' },
+  { key:'dobry', label:'W czym jestem dobry?' },
+  { key:'potrzebuje', label:'Czego potrzebuje mój biznes / otoczenie / rodzina?' },
+  { key:'placa', label:'Za co mi płacą (albo mogliby zapłacić)?' },
+];
+
+function monthKey(d){ return d.toISOString().slice(0,7); } // "2026-07"
+
+function renderIkigai(){
+  const box = document.getElementById('ikigaiBox');
+  const today = new Date();
+  const isFirstOfMonth = today.getDate() === 1;
+
+  if(!DATA.ikigai) DATA.ikigai = {};
+  const thisMonthKey = monthKey(today);
+  const alreadyDoneThisMonth = !!DATA.ikigai[thisMonthKey];
+
+  if(!isFirstOfMonth || alreadyDoneThisMonth){
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+  const form = document.getElementById('ikigaiForm');
+  form.innerHTML = IKIGAI_QUESTIONS.map(q => `
+    <div class="ikigai-q">
+      <label>${q.label}</label>
+      <textarea id="ikigai-${q.key}" placeholder="…"></textarea>
+    </div>
+  `).join('') + `<button class="ikigai-save" onclick="saveIkigai()">Zapisz refleksję miesiąca</button>`;
+}
+
+function saveIkigai(){
+  const entry = { date: todayStr() };
+  IKIGAI_QUESTIONS.forEach(q => {
+    entry[q.key] = document.getElementById(`ikigai-${q.key}`).value.trim();
+  });
+  if(!DATA.ikigai) DATA.ikigai = {};
+  DATA.ikigai[monthKey(new Date())] = entry;
+  renderIkigai();
+  queueSave();
+  showToast('Zapisano refleksję Ikigai');
+}
+
+function renderQuoteAndMissed(){
+  document.getElementById('quoteBox').textContent = '"' + getTodayQuote() + '"';
+
+  const box = document.getElementById('missedBox');
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  if(DATA.yesterdayMissed && DATA.yesterdayMissed.date === yesterday && DATA.yesterdayMissed.missed.length > 0){
+    box.style.display = 'block';
+    document.getElementById('missedList').innerHTML = DATA.yesterdayMissed.missed.map(t => `<li>${escapeHtml(t)}</li>`).join('');
+    document.getElementById('missedQuote').textContent = getTodayQuote();
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function renderWater(){
+  ensureWaterToday();
+  const ml = DATA.water.ml;
+  const pct = Math.min(100, Math.round((ml / WATER_GOAL) * 100));
+  document.getElementById('waterAmount').textContent = `${ml} / ${WATER_GOAL} ml`;
+  document.getElementById('waterBarFill').style.width = pct + '%';
+}
+
+function fireConfetti(){
+  const colors = ['#C9A876', '#6B9C89', '#E8E4DB'];
+  for(let i=0; i<24; i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random()*100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDelay = (Math.random()*0.3) + 's';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(piece);
+    setTimeout(()=>piece.remove(), 1800);
+  }
+}
+
+function resetTodayHabits(){
+  if(!confirm('Zresetować dzisiejsze odhaczenia? Cofnie to zdobyte dziś XP (1:1, bez dodatkowej kary).')) return;
+  ensureHabitsToday();
+  const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+  DATA.xp = Math.max(0, (DATA.xp || 0) - doneCount * 10);
+  DATA.habits.done = {};
+  renderHabits();
+  renderGamification();
+  queueSave();
+  showToast('Zresetowano — jutro zaczynasz od zera');
+}
+
+function markHabitFailed(id){
+  ensureHabitsToday();
+  if(!DATA.habits.failed) DATA.habits.failed = {};
+  const wasFailed = !!DATA.habits.failed[id];
+
+  if(wasFailed){
+    DATA.habits.failed[id] = false;
+  } else {
+    // jeśli było odhaczone jako zrobione, cofamy XP tak samo jak przy zwykłym odznaczeniu
+    if(DATA.habits.done[id]){
+      DATA.xp = Math.max(0, (DATA.xp || 0) - 10);
+      DATA.habits.done[id] = false;
+    }
+    DATA.habits.failed[id] = true;
+  }
+
+  renderHabits();
+  renderGamification();
+  queueSave();
+}
+
+function toggleHabit(id){
+  ensureHabitsToday();
+  if(DATA.habits.failed && DATA.habits.failed[id]) DATA.habits.failed[id] = false;
+  const wasDone = !!DATA.habits.done[id];
+  DATA.habits.done[id] = !wasDone;
+  DATA._justToggled = id;
+
+  const prevLevel = levelFromXp(DATA.xp || 0).level;
+
+  if(!wasDone){
+    DATA.xp = (DATA.xp || 0) + 10;
+  } else {
+    DATA.xp = Math.max(0, (DATA.xp || 0) - 10);
+  }
+
+  checkStreak();
+  renderHabits();
+  renderGamification();
+  queueSave();
+
+  if(!wasDone){
+    const newLevel = levelFromXp(DATA.xp).level;
+    if(newLevel > prevLevel){
+      document.getElementById('gamiLevel').classList.add('level-up');
+      setTimeout(()=>document.getElementById('gamiLevel').classList.remove('level-up'), 700);
+    }
+    const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+    if(doneCount === getTodayHabits().length){
+      fireConfetti();
+    }
+  }
+}
+
+function checkStreak(){
+  const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+  const today = todayStr();
+  if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
+
+  if(doneCount === getTodayHabits().length){
+    if(DATA.streak.lastCompleteDate !== today){
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+      DATA.streak.count = (DATA.streak.lastCompleteDate === yesterday) ? DATA.streak.count + 1 : 1;
+      DATA.streak.lastCompleteDate = today;
+    }
+  } else if(DATA.streak.lastCompleteDate === today){
+    // cofnięto checkbox po ukończeniu dnia — cofamy dzisiejszy wpis streaka
+    DATA.streak.count = Math.max(0, DATA.streak.count - 1);
+    DATA.streak.lastCompleteDate = "";
+  }
+}
+
+function levelFromXp(xp){
+  const level = Math.floor(xp / 100) + 1;
+  const inLevel = xp % 100;
+  return { level, inLevel };
+}
+
+const RANKS = [
+  { min:1,  name:'Brąz',    color:'#B08D57' },
+  { min:3,  name:'Srebro',  color:'#C7CCD1' },
+  { min:6,  name:'Złoto',   color:'#D6B35A' },
+  { min:10, name:'Platyna', color:'#8FD9C4' },
+  { min:15, name:'Diament', color:'#8FC7E8' },
+  { min:21, name:'Mistrz',  color:'#C9A876' },
+];
+function rankFromLevel(level){
+  let current = RANKS[0];
+  for(const r of RANKS){ if(level >= r.min) current = r; }
+  return current;
+}
+
+function renderGamification(){
+  const xp = DATA.xp || 0;
+  const { level, inLevel } = levelFromXp(xp);
+  const rank = rankFromLevel(level);
+
+  document.getElementById('gamiLevel').textContent = level;
+  document.getElementById('gamiLevel').style.borderColor = rank.color;
+  document.getElementById('gamiRank').textContent = rank.name;
+  document.getElementById('gamiRank').style.color = rank.color;
+  document.getElementById('gamiXpText').textContent = `${inLevel} / 100 XP`;
+  document.getElementById('gamiBarFill').style.width = inLevel + '%';
+
+  // jeśli minął dzień bez pełnego ukończenia — zeruj streak przy wejściu
+  const today = todayStr();
+  const last = DATA.streak?.lastCompleteDate || "";
+  if(last && last !== today){
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    if(last !== yesterday){
+      DATA.streak.count = 0;
+    }
+  }
+  document.getElementById('gamiStreak').textContent = DATA.streak?.count || 0;
+}
+
+function renderHabits(){
+  ensureHabitsToday();
+  const list = document.getElementById('habitsList');
+  const progressEl = document.getElementById('habitsProgress');
+  list.innerHTML = '';
+
+  const doneCount = getTodayHabits().filter(h => DATA.habits.done[h.id]).length;
+  const pct = Math.round((doneCount / getTodayHabits().length) * 100);
+  progressEl.innerHTML = `<span>${doneCount}/${getTodayHabits().length}</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span>${pct}%</span>`;
+
+  PERIODS.forEach(period => {
+    const items = getTodayHabits().filter(h => h.period === period);
+    const label = document.createElement('div');
+    label.className = 'habit-group-label';
+    label.textContent = '◆ ' + period;
+    list.appendChild(label);
+
+    items.forEach(h => {
+      const done = !!DATA.habits.done[h.id];
+      const failed = !!(DATA.habits.failed && DATA.habits.failed[h.id]);
+      const row = document.createElement('div');
+      row.className = 'habit-row' + (done ? ' done' : '') + (failed ? ' failed' : '') + (DATA._justToggled === h.id ? ' just-checked' : '');
+      row.onclick = () => toggleHabit(h.id);
+      const guideLink = h.guide ? ` <a href="${h.guide}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);text-decoration:none;font-size:12px">📖</a>` : '';
+      const timeBadge = h.time ? `<span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:var(--gold);background:rgba(201,168,118,0.14);border:1px solid rgba(201,168,118,0.35);border-radius:8px;padding:3px 9px;margin-left:auto;white-space:nowrap">${h.time}</span>` : '';
+      const failBtn = `<span onclick="event.stopPropagation(); markHabitFailed('${h.id}')" title="Nie zrobiłem" style="cursor:pointer;font-size:14px;opacity:${failed?'1':'0.35'};margin-left:8px">😔</span>`;
+      row.innerHTML = `<input type="checkbox" ${done?'checked':''} onclick="event.stopPropagation(); toggleHabit('${h.id}')"><span class="h-text">${escapeHtml(h.text)}${guideLink}</span>${timeBadge}${failBtn}`;
+      list.appendChild(row);
+    });
+  });
+}
+function loadPriority(){
+  const input = document.getElementById('priorityInput');
+  if(DATA.priority && DATA.priority.date === todayStr() && DATA.priority.text){
+    input.value = DATA.priority.text;
+    input.placeholder = 'Jedna najważniejsza rzecz na dziś…';
+  } else {
+    input.value = '';
+    const oldestTodo = (DATA.todos || []).filter(t=>!t.done).slice(-1)[0];
+    input.placeholder = oldestTodo ? `Podpowiedź: ${oldestTodo.text}` : 'Jedna najważniejsza rzecz na dziś…';
+  }
+  autoResize(input);
+}
+function savePriority(text){
+  DATA.priority = { text, date: todayStr() };
+  queueSave();
+}
+function autoResize(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function setGreeting(){
+  const h = new Date().getHours();
+  const g = h<5 ? 'Późna noc.' : h<12 ? 'Dzień dobry.' : h<18 ? 'Cześć.' : h<22 ? 'Dobry wieczór.' : 'Późna pora.';
+  document.getElementById('greeting').textContent = g;
+}
+function tickClock(){
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleDateString('pl-PL',{weekday:'short',day:'2-digit',month:'2-digit'}) + ' · ' + d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+name));
+}
+
+/* ---------- Sync (przez /api/baza-data, klucz chowa Vercel) ---------- */
+async function loadData(){
+  try{
+    const res = await fetch(API, { headers:{ 'X-Panel-Password': CONFIG.PIN }});
+    if(!res.ok) throw new Error('fetch failed');
+    const json = await res.json();
+    DATA = json.record && (json.record.links || json.record.notes || json.record.priority || json.record.habits) ? json.record : DATA;
+    if(!DATA.priority) DATA.priority = { text:"", date:"" };
+    if(!DATA.habits) DATA.habits = { date:"", done:{} };
+    if(typeof DATA.xp !== 'number') DATA.xp = 0;
+    if(!DATA.streak) DATA.streak = { count:0, lastCompleteDate:"" };
+    if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
+    if(!DATA.todos) DATA.todos = [];
+    if(!DATA.shoppingList) DATA.shoppingList = [];
+    if(!DATA.water) DATA.water = { date:"", ml:0 };
+    if(!DATA.habitHistory) DATA.habitHistory = {};
+    if(!DATA.ikigai) DATA.ikigai = {};
+    if(!DATA.watchList) DATA.watchList = [
+      { id:1, title:'The psychology of playing safe', done:false },
+      { id:2, title:'How to get Whatever you want', done:false },
+      { id:3, title:'The Desire to be Great', done:false },
+      { id:4, title:'57 Years Apart - a Boy and a Man Talk About Life', done:false },
+      { id:5, title:'Nothing changes if nothing changes', done:false },
+      { id:6, title:'When you stop caring, everything falls into place', done:false },
+      { id:7, title:'The beauty of losing yourself', done:false },
+      { id:8, title:'When Cartoon characters tried to tell us something', done:false },
+      { id:9, title:'The speech that brought this entire school to tears', done:false },
+      { id:10, title:'How to become a monster', done:false },
+      { id:11, title:'The mind of a Winner', done:false },
+      { id:12, title:'For those who are alone', done:false },
+      { id:13, title:'The goal is to experience', done:false },
+      { id:14, title:"Why didnt u cry?", done:false },
+      { id:15, title:'Birds do not sign in caves', done:false },
+    ];
+    setSyncStatus(true);
+  }catch(e){
+    setSyncStatus(false, 'brak danych — lokalnie');
+  }
+  renderAll();
+}
+
+function queueSave(){
+  setSyncStatus(true, 'zapisywanie…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveData, 600);
+}
+
+async function saveData(){
+  try{
+    const res = await fetch(API, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json', 'X-Panel-Password': CONFIG.PIN },
+      body: JSON.stringify(DATA)
+    });
+    if(!res.ok) throw new Error('save failed');
+    setSyncStatus(true, 'SYNC OK');
+  }catch(e){
+    setSyncStatus(false, 'błąd zapisu');
+  }
+}
+
+function setSyncStatus(ok, txt){
+  document.getElementById('syncDot').classList.toggle('off', !ok);
+  document.getElementById('syncTxt').textContent = txt || (ok ? 'SYNC OK' : 'OFFLINE');
+}
+
+/* ---------- Render ---------- */
+function renderAll(){ renderQuoteAndMissed(); renderIkigai(); renderHabits(); renderHeatmap(); renderGamification(); renderWater(); renderLinks(); renderNotes(); renderTodos(); renderShoppingList(); renderWatchList(); loadPriority(); }
+
+/* Links */
+function renderLinks(){
+  const grid = document.getElementById('linksGrid');
+  grid.innerHTML = '';
+  DATA.links.forEach((l, i)=>{
+    const a = document.createElement('a');
+    a.className = 'link-tile'; a.href = l.url; a.target = '_blank'; a.rel='noopener';
+    a.innerHTML = `<span class="rm" onclick="event.preventDefault();event.stopPropagation();removeLink(${i})">✕</span>
+                   <span class="ic">${l.icon||'🔗'}</span><span class="lbl">${escapeHtml(l.name)}</span>`;
+    grid.appendChild(a);
+  });
+  const add = document.createElement('div');
+  add.className = 'add-tile';
+  add.textContent = '+';
+  add.onclick = addLinkPrompt;
+  grid.appendChild(add);
+}
+function addLinkPrompt(){
+  const name = prompt('Nazwa (np. Vercel, GitHub, KeePass):');
+  if(!name) return;
+  let url = prompt('Adres URL:');
+  if(!url) return;
+  if(!/^https?:\/\//.test(url)) url = 'https://' + url;
+  const icon = prompt('Emoji (opcjonalnie):','🔗') || '🔗';
+  DATA.links.push({ name, url, icon });
+  renderLinks(); queueSave();
+}
+function removeLink(i){ DATA.links.splice(i,1); renderLinks(); queueSave(); }
+
+/* Szybki zapis -> Notatka albo Do zrobienia */
+function captureAsNote(){
+  const input = document.getElementById('captureInput');
+  const body = input.value.trim();
+  if(!body) return;
+  DATA.notes.unshift({ body, id:Date.now(), date:new Date().toISOString() });
+  input.value='';
+  renderNotes(); queueSave();
+  showToast('Zapisano jako notatkę');
+}
+function captureAsTodo(){
+  const input = document.getElementById('captureInput');
+  const body = input.value.trim();
+  if(!body) return;
+  if(!DATA.todos) DATA.todos = [];
+  DATA.todos.unshift({ text:body, done:false, id:Date.now(), date:new Date().toISOString() });
+  input.value='';
+  renderTodos(); queueSave();
+  showToast('Dodano do zrobienia');
+}
+let lastDeleted = null;
+
+function removeNote(id){
+  const idx = DATA.notes.findIndex(n=>n.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'note', item: DATA.notes[idx], index: idx };
+  DATA.notes.splice(idx, 1);
+  renderNotes(); queueSave();
+  showUndoToast('Usunięto notatkę');
+}
+function editNote(id){
+  const n = DATA.notes.find(n=>n.id===id);
+  if(!n) return;
+  const updated = prompt('Edytuj notatkę:', n.body);
+  if(updated === null) return;
+  n.body = updated.trim();
+  renderNotes(); queueSave();
+}
+function undoDelete(){
+  if(!lastDeleted) return;
+  if(lastDeleted.type === 'note') DATA.notes.splice(lastDeleted.index, 0, lastDeleted.item);
+  if(lastDeleted.type === 'todo') DATA.todos.splice(lastDeleted.index, 0, lastDeleted.item);
+  if(lastDeleted.type === 'shopping') DATA.shoppingList.splice(lastDeleted.index, 0, lastDeleted.item);
+  lastDeleted = null;
+  renderNotes(); renderTodos(); renderShoppingList(); queueSave();
+  document.getElementById('toast').classList.remove('show');
+}
+function showUndoToast(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = `${msg} <span onclick="undoDelete()" style="color:var(--gold);text-decoration:underline;cursor:pointer;margin-left:8px">Cofnij</span>`;
+  t.classList.add('show');
+  setTimeout(()=>{ if(!t.innerHTML.includes('Cofnij')) return; t.classList.remove('show'); lastDeleted=null; }, 5000);
+}
+function renderNotes(){
+  const list = document.getElementById('notesList');
+  if(DATA.notes.length===0){ list.innerHTML = '<div class="empty">Brak notatek</div>'; return; }
+  list.innerHTML = '';
+  DATA.notes.forEach(n=>{
+    const el = document.createElement('div');
+    el.className = 'note';
+    const d = n.date ? new Date(n.date).toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    el.innerHTML = `<div class="nhead"><span class="ndate">${d}</span><div style="display:flex;gap:10px"><span class="del" onclick="editNote(${n.id})" style="color:var(--sage)">✎</span><span class="del" onclick="removeNote(${n.id})">✕</span></div></div>
+                     <div class="nbody">${escapeHtml(n.body)}</div>`;
+    list.appendChild(el);
+  });
+}
+
+/* Do zrobienia */
+function toggleTodo(id){
+  const t = DATA.todos.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderTodos(); queueSave();
+}
+function removeTodo(id){
+  const idx = DATA.todos.findIndex(t=>t.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'todo', item: DATA.todos[idx], index: idx };
+  DATA.todos.splice(idx, 1);
+  renderTodos(); queueSave();
+  showUndoToast('Usunięto zadanie');
+}
+function editTodo(id){
+  const t = DATA.todos.find(t=>t.id===id);
+  if(!t) return;
+  const updated = prompt('Edytuj zadanie:', t.text);
+  if(updated === null) return;
+  t.text = updated.trim();
+  renderTodos(); queueSave();
+}
+function renderTodos(){
+  const list = document.getElementById('todosList');
+  if(!DATA.todos) DATA.todos = [];
+  const active = DATA.todos.filter(t => !t.done);
+  const archived = DATA.todos.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Brak aktywnych zadań</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row" onclick="toggleTodo(${t.id})">
+        <input type="checkbox" onclick="event.stopPropagation(); toggleTodo(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span onclick="event.stopPropagation(); editTodo(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span>
+        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleTodoArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Archiwum (${archived.length}) <span id="todoArchiveArrow">${DATA._todoArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div id="todoArchiveBox" style="display:${DATA._todoArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += archived.length === 0
+    ? '<div class="empty">Brak zrobionych zadań.</div>'
+    : archived.map(t => `
+      <div class="habit-row done" onclick="toggleTodo(${t.id})">
+        <input type="checkbox" checked onclick="event.stopPropagation(); toggleTodo(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span class="del" onclick="event.stopPropagation(); removeTodo(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+
+function toggleTodoArchive(){
+  DATA._todoArchiveOpen = !DATA._todoArchiveOpen;
+  renderTodos();
+}
+
+/* Zakupy */
+function addShoppingItem(){
+  const input = document.getElementById('shoppingInput');
+  const text = input.value.trim();
+  if(!text) return;
+  if(!DATA.shoppingList) DATA.shoppingList = [];
+  DATA.shoppingList.unshift({ id:Date.now(), text, done:false });
+  input.value = '';
+  renderShoppingList(); queueSave();
+}
+function toggleShoppingItem(id){
+  const t = DATA.shoppingList.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderShoppingList(); queueSave();
+}
+function removeShoppingItem(id){
+  const idx = DATA.shoppingList.findIndex(t=>t.id===id);
+  if(idx === -1) return;
+  lastDeleted = { type:'shopping', item: DATA.shoppingList[idx], index: idx };
+  DATA.shoppingList.splice(idx, 1);
+  renderShoppingList(); queueSave();
+  showUndoToast('Usunięto z listy zakupów');
+}
+function editShoppingItem(id){
+  const t = DATA.shoppingList.find(t=>t.id===id);
+  if(!t) return;
+  const updated = prompt('Edytuj produkt:', t.text);
+  if(updated === null) return;
+  t.text = updated.trim();
+  renderShoppingList(); queueSave();
+}
+function renderShoppingList(){
+  const list = document.getElementById('shoppingList');
+  if(!DATA.shoppingList) DATA.shoppingList = [];
+  const active = DATA.shoppingList.filter(t => !t.done);
+  const bought = DATA.shoppingList.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Lista pusta</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row" onclick="toggleShoppingItem(${t.id})">
+        <input type="checkbox" onclick="event.stopPropagation(); toggleShoppingItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span onclick="event.stopPropagation(); editShoppingItem(${t.id})" style="color:var(--sage);cursor:pointer;margin-left:auto">✎</span>
+        <span class="del" onclick="event.stopPropagation(); removeShoppingItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:8px">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleShoppingArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Kupione (${bought.length}) <span id="shoppingArchiveArrow">${DATA._shoppingArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div id="shoppingArchiveBox" style="display:${DATA._shoppingArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += bought.length === 0
+    ? '<div class="empty">Brak kupionych rzeczy.</div>'
+    : bought.map(t => `
+      <div class="habit-row done" onclick="toggleShoppingItem(${t.id})">
+        <input type="checkbox" checked onclick="event.stopPropagation(); toggleShoppingItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.text)}</span>
+        <span class="del" onclick="event.stopPropagation(); removeShoppingItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+
+function toggleShoppingArchive(){
+  DATA._shoppingArchiveOpen = !DATA._shoppingArchiveOpen;
+  renderShoppingList();
+}
+
+/* Filmy do obejrzenia */
+function addWatchItem(){
+  const input = document.getElementById('watchInput');
+  const title = input.value.trim();
+  if(!title) return;
+  if(!DATA.watchList) DATA.watchList = [];
+  DATA.watchList.unshift({ id:Date.now(), title, done:false });
+  input.value = '';
+  renderWatchList(); queueSave();
+}
+function toggleWatchItem(id){
+  const t = DATA.watchList.find(t=>t.id===id);
+  if(t) t.done = !t.done;
+  renderWatchList(); queueSave();
+}
+function removeWatchItem(id){
+  DATA.watchList = DATA.watchList.filter(t=>t.id!==id);
+  renderWatchList(); queueSave();
+}
+function renderWatchList(){
+  const list = document.getElementById('watchList');
+  if(!DATA.watchList) DATA.watchList = [];
+  const active = DATA.watchList.filter(t => !t.done);
+  const watched = DATA.watchList.filter(t => t.done);
+
+  let html = '';
+  if(active.length === 0){
+    html += '<div class="empty">Lista pusta</div>';
+  } else {
+    html += active.map(t => `
+      <div class="habit-row">
+        <input type="checkbox" onclick="toggleWatchItem(${t.id})">
+        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(t.title)}" target="_blank" onclick="event.stopPropagation()" class="h-text" style="color:var(--text);text-decoration:none">${escapeHtml(t.title)} <span style="color:var(--sage)">▶</span></a>
+        <span class="del" onclick="removeWatchItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  }
+
+  html += `<div onclick="toggleWatchArchive()" style="font-size:12px;color:var(--text-muted);font-weight:bold;padding:10px 4px;border-top:1px solid var(--line);margin-top:8px;cursor:pointer;user-select:none">
+    📦 Obejrzane (${watched.length}) <span>${DATA._watchArchiveOpen ? '▾' : '▸'}</span>
+  </div>`;
+  html += `<div style="display:${DATA._watchArchiveOpen ? 'block' : 'none'}; margin-top:6px">`;
+  html += watched.length === 0
+    ? '<div class="empty">Brak obejrzanych.</div>'
+    : watched.map(t => `
+      <div class="habit-row done">
+        <input type="checkbox" checked onclick="toggleWatchItem(${t.id})">
+        <span class="h-text">${escapeHtml(t.title)}</span>
+        <span class="del" onclick="removeWatchItem(${t.id})" style="color:var(--text-muted);cursor:pointer;margin-left:auto">✕</span>
+      </div>
+    `).join('');
+  html += `</div>`;
+
+  list.innerHTML = html;
+}
+function toggleWatchArchive(){
+  DATA._watchArchiveOpen = !DATA._watchArchiveOpen;
+  renderWatchList();
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+function openApp(event, appScheme, webUrl){
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  if(!isIOS && !isAndroid){
+    return true; // desktop — zwykły link do web, bez zmian
+  }
+  event.preventDefault();
+  const start = Date.now();
+  window.location.href = appScheme;
+  setTimeout(() => {
+    // jeśli appka się nie otworzyła (strona dalej widoczna po ~1.2s), otwórz web
+    if(Date.now() - start < 2000 && !document.hidden){
+      window.open(webUrl, '_blank');
+    }
+  }, 1200);
+  return false;
+}
+const VAPID_PUBLIC_KEY = 'BOBECtNButN0IKX6bPInCRJRuYGlkPJRWwmv9U5U-vFau97bgh019qd-sYa3CmF-fZ30YcVZfBlFUNxUlq6KTs4';
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function enablePush(){
+  const btn = document.getElementById('notifyBtn');
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    alert('Ta przeglądarka nie obsługuje powiadomień push. Na iPhone: dodaj Bazę do ekranu głównego (Udostępnij → Dodaj do ekranu głównego), otwórz ją stamtąd, i spróbuj ponownie.');
+    return;
+  }
+  btn.textContent = '⏳ Łączenie…';
+  try{
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      btn.textContent = '🔕 Odmówiono';
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
+    const exists = DATA.pushSubscriptions.some(s => s.endpoint === sub.endpoint);
+    if(!exists){
+      DATA.pushSubscriptions.push(JSON.parse(JSON.stringify(sub)));
+      queueSave();
+    }
+    btn.textContent = '✅ Powiadomienia włączone';
+  }catch(e){
+    btn.textContent = '🔔 Włącz powiadomienia';
+    alert('Nie udało się włączyć powiadomień: ' + e.message);
+  }
+}
+
+// Sprawdź od razu przy starcie czy już jesteśmy zasubskrybowani
+async function checkExistingSubscription(){
+  if(!('serviceWorker' in navigator)) return;
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    if(!reg) return;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){
+      document.getElementById('notifyBtn').textContent = '✅ Powiadomienia włączone';
+    }
+  }catch(e){}
+}
+window.addEventListener('DOMContentLoaded', checkExistingSubscription);
+</script>
+</body>
+</html>
