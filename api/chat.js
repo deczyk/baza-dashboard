@@ -32,11 +32,39 @@ NARZĘDZIA:
 - read_calendar — odczyt najbliższych wydarzeń z Google Calendar (podpięty w Bazie)
 - create_calendar_event — dodanie wydarzenia do kalendarza
 - read_crm_data — odczyt danych z CRM firmy Sklep za Stodołą (klienci, sprawy w toku, terminy, instalacje)
+- search_vault, read_vault_note, write_vault_note, list_vault_notes — Twój skarbiec notatek (ten sam co
+  w wersji desktopowej, wspólny magazyn)
+- sync_baza_notes_to_vault — kopiuje notatki z Bazy do skarbca
+- list_memory, read_memory, write_memory, delete_memory — Twoje trwałe, destylowane lekcje (osobne od
+  skarbca — to Twoje wnioski o pracy z Kubą, nie jego surowa wiedza)
 Czasem dostaniesz w wiadomości tekst oznaczony jako odczytany z OCR ze zrzutu ekranu — to wyekstrahowany
 tekst, nie pełne widzenie obrazu, więc traktuj go jak dowolny inny tekst do analizy, nie zakładaj że widziałeś
 układ graficzny czy kolory.
 Używaj narzędzi proaktywnie, kiedy pytanie/prośba tego wymaga, zamiast zgadywać. Przy zapisie danych (update_baza_data,
-create_calendar_event) wykonaj akcję i potwierdź krótko, po swojemu, co zostało zrobione.`;
+create_calendar_event) wykonaj akcję i potwierdź krótko, po swojemu, co zostało zrobione.
+
+TRWAŁE LEKCJE (protokół Napisz-Skonsoliduj-Przypomnij-Zastosuj): masz magazyn "memory" na destylowane,
+długoterminowe lekcje — osobny od transkryptu czatu. To nie jest miejsce na notatki z każdej rozmowy, tylko
+na rzeczy realnie warte zapamiętania: coś co zajęło dużo czasu odkryć, poprawkę błędnego założenia,
+potwierdzone podejście.
+- NAPISZ (kiedy Kuba poprosi "zapisz to na przyszłość" albo pod koniec wartościowej sesji): zapisz przez
+  write_memory plik z jednolinijkowym podsumowaniem na górze. Sprawdź najpierw przez list_memory/read_memory
+  czy już tego nie ma.
+- SKONSOLIDUJ (kiedy Kuba poprosi "skonsoliduj pamięć"): przejrzyj wszystkie przez list_memory, połącz
+  duplikaty w gęstsze pliki, usuń przez delete_memory te nieaktualne/błędne.
+- PRZYPOMNIJ (na starcie zadania, które może mieć związek z czymś zapisanym): list_memory, potem read_memory
+  tylko na tym co wygląda istotnie, jawnie powiedz co znalazłeś albo że nic nie pasuje.
+- ZASTOSUJ: przypomniana lekcja ma faktycznie zmienić Twoje podejście, nie tylko zostać wspomniana.
+Nigdy nie rób tego automatycznie bez wyraźnej prośby.
+
+SKARBIEC (vault): surowe notatki Kuby, nie destylowane lekcje. Możesz tam pisać (write_vault_note) i czytać
+(search_vault, read_vault_note). Używaj search_vault kiedy Kuba pyta co kiedyś pisał/notował o czymś.
+
+DORADZTWO MODELU: masz dwa tryby — deepseek-chat (szybki, domyślny) i deepseek-reasoner (wolniejszy,
+droższy, ale znacznie mocniejszy w wieloetapowym rozumowaniu i trudnym debugowaniu). Kiedy oceniasz, że
+zadanie jest złożone, wieloetapowe, wymaga głębokiego rozumowania albo precyzyjnego planowania — powiedz o
+tym Kubie wprost i zasugeruj przełączenie się na deepseek-reasoner (wpisuje /reasoner). Nie proponuj tego
+przy prostych, szybkich pytaniach — tylko kiedy realnie by pomogło.`;
 
 const TOOLS_SCHEMA = [
   {
@@ -73,6 +101,7 @@ const TOOLS_SCHEMA = [
             description: "Rodzaj akcji do wykonania",
           },
           text: { type: "string", description: "Treść zadania / notatki / produktu / tytułu filmu / priorytetu dnia (dla add_todo, add_note, add_shopping_item, add_watch_item, set_priority)" },
+          note: { type: "string", description: "Opcjonalna notatka do zadania, np. kiedy je zrobisz ('zrobię w poniedziałek', 'odłożone, spróbuj jutro') — tylko dla add_todo" },
           kcal: { type: "number", description: "Liczba kalorii do dodania (tylko dla add_calories)" },
           habit_id: { type: "string", description: "ID nawyku do odznaczenia (tylko dla toggle_habit, format 'hNN', np. 'h1')" },
         },
@@ -112,24 +141,141 @@ const TOOLS_SCHEMA = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "search_vault",
+      description: "Przeszukuje treść wszystkich notatek w skarbcu — jak wyszukiwarka po własnej bazie wiedzy.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Czego szukać" },
+          max_results: { type: "integer", description: "Maksymalna liczba dopasowań (domyślnie 8)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_vault_note",
+      description: "Czyta pełną treść jednej notatki ze skarbca.",
+      parameters: { type: "object", properties: { filename: { type: "string" } }, required: ["filename"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_vault_note",
+      description: "Zapisuje/nadpisuje notatkę w skarbcu.",
+      parameters: {
+        type: "object",
+        properties: { filename: { type: "string" }, content: { type: "string" } },
+        required: ["filename", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_vault_notes",
+      description: "Listuje nazwy wszystkich notatek w skarbcu.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "sync_baza_notes_to_vault",
+      description: "Kopiuje notatki z zakładki Notatki w Bazie do skarbca.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_memory",
+      description: "Listuje nazwy wszystkich zapisanych trwałych lekcji.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "read_memory",
+      description: "Czyta treść jednej zapisanej lekcji.",
+      parameters: { type: "object", properties: { filename: { type: "string" } }, required: ["filename"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "write_memory",
+      description: "Zapisuje nową trwałą lekcję.",
+      parameters: {
+        type: "object",
+        properties: { filename: { type: "string" }, content: { type: "string" } },
+        required: ["filename", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_memory",
+      description: "Usuwa lekcję (np. podczas konsolidacji, gdy jest nieaktualna albo zduplikowana).",
+      parameters: { type: "object", properties: { filename: { type: "string" } }, required: ["filename"] },
+    },
+  },
 ];
 
 // ---------- web_search ----------
+async function searchSerper(query) {
+  const resp = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "X-API-KEY": process.env.SERPER_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ q: query, num: 5 }),
+  });
+  if (!resp.ok) throw new Error(`Serper status ${resp.status}`);
+  const data = await resp.json();
+  return (data.organic || []).slice(0, 5).map((item) => ({
+    title: item.title || "",
+    snippet: item.snippet || "",
+    url: item.link || "",
+  }));
+}
+
+async function searchDuckDuckGo(query) {
+  const resp = await fetch("https://html.duckduckgo.com/html/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0" },
+    body: new URLSearchParams({ q: query }),
+  });
+  const html = await resp.text();
+  const results = [];
+  const blockRegex = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/g;
+  let match, count = 0;
+  while ((match = blockRegex.exec(html)) !== null && count < 5) {
+    const stripTags = (s) => s.replace(/<[^>]+>/g, "").trim();
+    results.push({ url: match[1], title: stripTags(match[2]), snippet: stripTags(match[3]) });
+    count++;
+  }
+  return results;
+}
+
 async function webSearch(query) {
   try {
-    const resp = await fetch("https://html.duckduckgo.com/html/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0" },
-      body: new URLSearchParams({ q: query }),
-    });
-    const html = await resp.text();
-    const results = [];
-    const blockRegex = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/g;
-    let match, count = 0;
-    while ((match = blockRegex.exec(html)) !== null && count < 5) {
-      const stripTags = (s) => s.replace(/<[^>]+>/g, "").trim();
-      results.push({ url: match[1], title: stripTags(match[2]), snippet: stripTags(match[3]) });
-      count++;
+    let results = [];
+    if (process.env.SERPER_API_KEY) {
+      try {
+        results = await searchSerper(query);
+      } catch (e) {
+        results = []; // spadnij do DuckDuckGo
+      }
+    }
+    if (results.length === 0) {
+      results = await searchDuckDuckGo(query);
     }
     return results.length ? JSON.stringify(results) : "Brak wyników.";
   } catch (e) {
@@ -189,7 +335,7 @@ async function updateBazaData(args) {
       case "add_todo":
         if (!args.text) return "Brak treści zadania.";
         if (!data.todos) data.todos = [];
-        data.todos.unshift({ text: args.text, done: false, id: Date.now(), date: now });
+        data.todos.unshift({ text: args.text, done: false, id: Date.now(), date: now, note: args.note || undefined });
         break;
       case "add_note":
         if (!args.text) return "Brak treści notatki.";
@@ -295,6 +441,96 @@ async function readCrmData() {
   }
 }
 
+// ---------- Skarbiec (vault) i trwałe lekcje (memory) — przez ten sam magazyn co api/debrain-memory.js ----------
+
+async function memoryStoreAction(action, payload) {
+  const r = await fetch(`https://${bazaDomain()}/api/debrain-memory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, payload: payload || {} }),
+  });
+  return r.json();
+}
+
+async function toolSearchVault(query, max_results = 8) {
+  try {
+    const listRes = await memoryStoreAction("vaultList", {});
+    const files = listRes.files || [];
+    const results = [];
+    for (const filename of files) {
+      const readRes = await memoryStoreAction("vaultRead", { filename });
+      const content = readRes.content || "";
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].toLowerCase().includes(query.toLowerCase())) {
+          const snippet = lines.slice(Math.max(0, i - 1), i + 2).join("\n").trim();
+          results.push({ plik: filename, fragment: snippet.slice(0, 400) });
+          if (results.length >= max_results) break;
+        }
+      }
+      if (results.length >= max_results) break;
+    }
+    return results.length ? JSON.stringify(results) : `Brak wyników dla '${query}' w skarbcu.`;
+  } catch (e) {
+    return "Błąd przeszukiwania skarbca: " + e.message;
+  }
+}
+
+async function toolReadVaultNote(filename) {
+  const res = await memoryStoreAction("vaultRead", { filename });
+  return res.content !== null && res.content !== undefined ? res.content : `Nie znaleziono notatki: ${filename}`;
+}
+
+async function toolWriteVaultNote(filename, content) {
+  await memoryStoreAction("vaultWrite", { filename, content });
+  return `Zapisano notatkę: ${filename}`;
+}
+
+async function toolListVaultNotes() {
+  const res = await memoryStoreAction("vaultList", {});
+  return JSON.stringify(res.files || []);
+}
+
+async function toolSyncBazaNotesToVault() {
+  try {
+    const data = await fetchBazaData();
+    const notes = data.notes || [];
+    if (!notes.length) return "Brak notatek w Bazie do zsynchronizowania.";
+    let count = 0;
+    for (const n of notes) {
+      const body = (n.body || "").trim();
+      if (!body) continue;
+      const date = (n.date || "").slice(0, 10);
+      const filename = `baza-notatki/${date}-${n.id}.md`;
+      await memoryStoreAction("vaultWrite", { filename, content: `# Notatka z Bazy (${date})\n\n${body}\n` });
+      count++;
+    }
+    return `Zsynchronizowano ${count} notatek do skarbca.`;
+  } catch (e) {
+    return "Błąd synchronizacji notatek: " + e.message;
+  }
+}
+
+async function toolListMemory() {
+  const res = await memoryStoreAction("memoryList", {});
+  return JSON.stringify(res.files || []);
+}
+
+async function toolReadMemory(filename) {
+  const res = await memoryStoreAction("memoryRead", { filename });
+  return res.content !== null && res.content !== undefined ? res.content : `Nie znaleziono lekcji: ${filename}`;
+}
+
+async function toolWriteMemory(filename, content) {
+  await memoryStoreAction("memoryWrite", { filename, content });
+  return `Zapisano lekcję: ${filename}`;
+}
+
+async function toolDeleteMemory(filename) {
+  await memoryStoreAction("memoryDelete", { filename });
+  return `Usunięto lekcję: ${filename}`;
+}
+
 const TOOL_IMPL = {
   web_search: (args) => webSearch(args.query),
   read_baza_data: () => readBazaData(),
@@ -302,6 +538,15 @@ const TOOL_IMPL = {
   read_calendar: () => readCalendar(),
   create_calendar_event: (args) => createCalendarEvent(args),
   read_crm_data: () => readCrmData(),
+  search_vault: (args) => toolSearchVault(args.query, args.max_results),
+  read_vault_note: (args) => toolReadVaultNote(args.filename),
+  write_vault_note: (args) => toolWriteVaultNote(args.filename, args.content),
+  list_vault_notes: () => toolListVaultNotes(),
+  sync_baza_notes_to_vault: () => toolSyncBazaNotesToVault(),
+  list_memory: () => toolListMemory(),
+  read_memory: (args) => toolReadMemory(args.filename),
+  write_memory: (args) => toolWriteMemory(args.filename, args.content),
+  delete_memory: (args) => toolDeleteMemory(args.filename),
 };
 
 async function callDeepSeek(messages, model) {
@@ -323,8 +568,13 @@ module.exports = async (req, res) => {
     return;
   }
 
+  res.writeHead(200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+  });
+
   try {
-    const { history, model: requestedModel } = req.body;
+    const { history, model: requestedModel, chatId } = req.body;
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let messages = [{ role: "system", content: SYSTEM_PROMPT }, ...(history || [])];
     let finalContent = null;
@@ -341,18 +591,38 @@ module.exports = async (req, res) => {
 
       for (const tc of choice.tool_calls) {
         const args = JSON.parse(tc.function.arguments || "{}");
+        res.write(JSON.stringify({ type: "tool_start", name: tc.function.name, args }) + "\n");
         const impl = TOOL_IMPL[tc.function.name];
         const result = impl ? await impl(args) : "Nieznane narzędzie";
         messages.push({ role: "tool", tool_call_id: tc.id, content: String(result).slice(0, 6000) });
+        res.write(JSON.stringify({ type: "tool_end", name: tc.function.name }) + "\n");
       }
     }
 
-    res.status(200).json({
+    const updatedHistory = messages.filter((m) => m.role !== "system");
+
+    // Zapis do wspólnego magazynu (ten sam bin, którego używa desktop przy włączonej synchronizacji)
+    if (chatId) {
+      try {
+        await fetch(`https://${req.headers.host}/api/debrain-memory`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "saveChatHistory", payload: { chatId, history: updatedHistory } }),
+        });
+      } catch (e) {
+        // Nie blokujemy odpowiedzi, jeśli sam zapis pamięci się nie uda
+      }
+    }
+
+    res.write(JSON.stringify({
+      type: "final",
       reply: finalContent || "⚠️ Nie udało się uzyskać odpowiedzi.",
-      history: messages.filter((m) => m.role !== "system"),
+      history: updatedHistory,
       model,
-    });
+    }) + "\n");
+    res.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.write(JSON.stringify({ type: "final", error: err.message }) + "\n");
+    res.end();
   }
 };
