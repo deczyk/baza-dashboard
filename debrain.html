@@ -277,15 +277,6 @@
     read_calendar: 'sprawdzam kalendarz',
     create_calendar_event: 'dodaję do kalendarza',
     read_crm_data: 'czytam dane z CRM',
-    search_vault: 'przeszukuję skarbiec',
-    read_vault_note: 'czytam notatkę',
-    write_vault_note: 'zapisuję notatkę',
-    list_vault_notes: 'listuję notatki',
-    sync_baza_notes_to_vault: 'synchronizuję notatki z Bazy',
-    list_memory: 'sprawdzam zapisane lekcje',
-    read_memory: 'czytam lekcję',
-    write_memory: 'zapisuję lekcję',
-    delete_memory: 'usuwam nieaktualną lekcję',
   };
 
   function addAssistantWithSteps() {
@@ -473,7 +464,7 @@
     try {
       const res = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: activeChatId, history, model: currentModel }),
+        body: JSON.stringify({ chatId: activeChatId, history, model: currentModel, hidden: !!opts.hideUserBubble }),
       });
 
       if (!res.body) {
