@@ -19,6 +19,29 @@
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
   body { -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
 
+  /* ---------- Gate ---------- */
+  #gate {
+    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 18px; z-index: 100;
+  }
+  #gate .mark { font-family: var(--font-mono); color: var(--sage); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; }
+  #gate input {
+    background: var(--surface); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--font-mono); font-size: 20px; letter-spacing: .3em; text-align: center;
+    padding: 14px 18px; border-radius: 8px; width: 200px; outline: none;
+  }
+  #gate input:focus { border-color: var(--sage); }
+  #gate .err { color: var(--danger); font-size: 12px; font-family: var(--font-mono); height: 14px; }
+  #gate button {
+    background: var(--sage); color: #14181B; border: none; border-radius: 8px; padding: 12px 22px;
+    font-family: var(--font-mono); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* ---------- App ---------- */
+  #app { display: none; }
+  #app.visible { display: block; }
+
   .shell { max-width: 720px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; }
   header {
     padding: 20px 16px 14px; border-bottom: 1px solid var(--line);
@@ -67,28 +90,57 @@
 </style>
 </head>
 <body>
-<div class="shell">
-  <header>
-    <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name">Debrain</span><span class="tag">deepseek v3.2</span></div>
-    <a class="back-link" href="index.html">◆ Baza</a>
-  </header>
-  <main id="chatLog">
-    <div class="empty">Twój agent. Pisze, przeszukuje sieć, pamięta rozmowę w tej sesji.</div>
-  </main>
-  <footer>
-    <form id="chatForm">
-      <textarea id="input" placeholder="Zapytaj Debrain…" rows="1"></textarea>
-      <button type="submit" class="send" id="sendBtn">Wyślij</button>
-    </form>
-  </footer>
+
+<div id="gate">
+  <div class="mark">◆ DEBRAIN — DOSTĘP</div>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
+  <div class="err" id="gateErr"></div>
+  <button onclick="tryUnlock()">Odblokuj</button>
+</div>
+
+<div id="app">
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name">Debrain</span><span class="tag">deepseek v3.2</span></div>
+      <a class="back-link" href="index.html">◆ Baza</a>
+    </header>
+    <main id="chatLog">
+      <div class="empty">Ładowanie pamięci…</div>
+    </main>
+    <footer>
+      <form id="chatForm">
+        <textarea id="input" placeholder="Zapytaj Debrain…" rows="1"></textarea>
+        <button type="submit" class="send" id="sendBtn">Wyślij</button>
+      </form>
+    </footer>
+  </div>
 </div>
 
 <script>
-  // Wymaga przejścia przez PIN na index.html
-  if (sessionStorage.getItem('baza_unlocked') !== '1') {
-    window.location.href = 'index.html';
+  // ---------- Własny PIN dla Debrain (niezależny od PIN-u Bazy) ----------
+  const DEBRAIN_PIN = "5855"; // <-- zmień na swój, jeśli chcesz inny niż PIN Bazy
+
+  function tryUnlock(){
+    const val = document.getElementById('pinInput').value;
+    if(val === DEBRAIN_PIN){
+      sessionStorage.setItem('debrain_unlocked','1');
+      document.getElementById('gate').style.display='none';
+      document.getElementById('app').classList.add('visible');
+      initChat();
+    } else {
+      document.getElementById('gateErr').textContent = 'Zły PIN';
+      document.getElementById('pinInput').value='';
+    }
+  }
+  document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+  if(sessionStorage.getItem('debrain_unlocked')==='1'){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').classList.add('visible');
+    window.addEventListener('DOMContentLoaded', initChat);
   }
 
+  // ---------- Chat + trwała pamięć ----------
   const log = document.getElementById('chatLog');
   const form = document.getElementById('chatForm');
   const input = document.getElementById('input');
@@ -97,6 +149,7 @@
 
   let history = [];
   let firstMessage = true;
+  let saveTimer = null;
 
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
@@ -113,6 +166,37 @@
     log.appendChild(wrap);
     log.scrollTop = log.scrollHeight;
     return bubble;
+  }
+
+  async function initChat(){
+    try {
+      const res = await fetch('/api/debrain-memory');
+      const data = await res.json();
+      history = data.history || [];
+      if (history.length === 0) {
+        log.innerHTML = '<div class="empty">Twój agent. Pisze, przeszukuje sieć, zna dane z Bazy, pamięta rozmowę między sesjami.</div>';
+      } else {
+        firstMessage = true;
+        history.forEach(m => {
+          if (m.role === 'user' || (m.role === 'assistant' && m.content)) {
+            addMsg(m.role, m.content);
+          }
+        });
+      }
+    } catch (e) {
+      log.innerHTML = '<div class="empty">Twój agent. (Pamięć trwała niedostępna — sprawdź konfigurację.)</div>';
+    }
+  }
+
+  function queueSaveMemory(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      fetch('/api/debrain-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history }),
+      }).catch(() => {});
+    }, 400);
   }
 
   input.addEventListener('input', () => {
@@ -143,6 +227,7 @@
       const data = await res.json();
       thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
       history = data.history || history;
+      queueSaveMemory();
     } catch (err) {
       thinkingBubble.textContent = 'Błąd połączenia: ' + err.message;
     } finally {
