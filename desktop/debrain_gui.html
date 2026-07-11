@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debrain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
+    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); overflow: hidden; }
+  body { -webkit-font-smoothing: antialiased; }
+
+  .app { display: flex; height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar-top { padding: 14px 12px 10px; border-bottom: 1px solid var(--line); }
+  .sidebar-brand { font-size: 16px; font-weight: 700; margin-bottom: 10px; padding: 0 4px; }
+  .sidebar-btn {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--font-sans); font-size: 12.5px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    text-align: left; margin-bottom: 6px;
+  }
+  .sidebar-btn:hover { border-color: var(--gold); }
+  .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+  .folder { margin-bottom: 4px; }
+  .folder-head {
+    display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-family: var(--font-mono);
+  }
+  .folder-head:hover { background: var(--surface-2); }
+  .folder-head .arrow { transition: transform .15s; font-size: 9px; }
+  .folder-head.collapsed .arrow { transform: rotate(-90deg); }
+  .folder-actions { margin-left: auto; display: none; gap: 6px; }
+  .folder-head:hover .folder-actions { display: flex; }
+  .folder-actions span { opacity: .6; cursor: pointer; font-size: 12px; }
+  .folder-actions span:hover { opacity: 1; }
+  .folder-chats { padding-left: 8px; }
+  .folder-chats.collapsed { display: none; }
+
+  .chat-item {
+    display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 12.5px; color: var(--text-muted); margin-bottom: 1px;
+  }
+  .chat-item:hover { background: var(--surface-2); color: var(--text); }
+  .chat-item.active { background: var(--surface-2); color: var(--gold); }
+  .chat-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-item .chat-actions { display: none; gap: 6px; flex-shrink: 0; }
+  .chat-item:hover .chat-actions { display: flex; }
+  .chat-item .chat-actions span { opacity: .6; font-size: 11px; }
+  .chat-item .chat-actions span:hover { opacity: 1; }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  header {
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand-name { font-size: 16px; font-weight: 600; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sage); box-shadow: 0 0 6px var(--sage); animation: pulse 2.6s infinite; }
+  .dot.thinking { animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(107,156,137,.5)} 70%{box-shadow:0 0 0 9px rgba(107,156,137,0)} 100%{box-shadow:0 0 0 0 rgba(107,156,137,0)} }
+  .tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .badge-local {
+    font-family: var(--font-mono); font-size: 10px; color: var(--sage); border: 1px solid var(--sage);
+    padding: 3px 8px; border-radius: 20px; letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { display: flex; flex-direction: column; gap: 5px; max-width: 88%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .who { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .bubble {
+    padding: 11px 14px; border-radius: 12px; font-size: 14px; line-height: 1.55;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .msg.user .bubble { background: rgba(201,168,118,0.14); color: var(--text); border: 1px solid var(--gold); border-bottom-right-radius: 3px; }
+  .msg.assistant .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+  .tool-steps { display: flex; flex-direction: column; gap: 3px; margin-bottom: 2px; }
+  .tool-step {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); opacity: .8;
+    display: flex; align-items: center; gap: 6px; padding: 2px 4px;
+  }
+  .tool-step.done { color: var(--sage); }
+  .tool-step .spin { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: pulse 1s infinite; flex-shrink: 0; }
+  .tool-step.done .spin { background: var(--sage); animation: none; }
+
+  footer { padding: 14px 20px 20px; border-top: 1px solid var(--line); flex-shrink: 0; }
+  form { display: flex; gap: 10px; }
+  textarea {
+    flex: 1; resize: none; background: var(--surface); border: 1px solid var(--line); color: var(--text);
+    font-family: var(--font-sans); font-size: 14px; padding: 12px 14px; border-radius: 10px; outline: none;
+    min-height: 46px; max-height: 160px;
+  }
+  textarea:focus { border-color: var(--gold); }
+  button.send {
+    background: var(--gold); color: #14181B; border: none; padding: 0 20px;
+    font-family: var(--font-mono); font-weight: 700; font-size: 12.5px; letter-spacing: .05em;
+    text-transform: uppercase; border-radius: 10px; cursor: pointer;
+  }
+  button.send:disabled { opacity: .5; }
+  button.send:active { transform: scale(.96); }
+
+  .empty { color: var(--text-muted); font-size: 13px; margin-top: 30px; line-height: 1.7; font-family: var(--font-mono); text-align: center; }
+  ::-webkit-scrollbar { width: 7px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">Debrain</div>
+      <button class="sidebar-btn" id="newChatBtn">+ Nowa rozmowa</button>
+      <button class="sidebar-btn" id="newFolderBtn">+ Nowy folder</button>
+      <a class="sidebar-btn" href="/vault-graph.html" style="display:block;text-decoration:none;text-align:left">🕸️ Graf skarbca</a>
+    </div>
+    <div class="sidebar-list" id="sidebarList"></div>
+  </aside>
+
+  <div class="main">
+    <header>
+      <div class="brand"><span class="dot" id="statusDot"></span><span class="brand-name" id="chatTitle">Debrain</span><span class="tag">drugi mózg decza</span><span class="tag" id="modelTag">deepseek-chat</span></div>
+      <span class="badge-local">lokalnie · pisze kod</span>
+    </header>
+    <main id="chatLog">
+      <div class="empty">Ładowanie…</div>
+    </main>
+    <footer>
+      <form id="chatForm">
+        <textarea id="input" placeholder="Zapytaj Debrain… (/reasoner, /chat)" rows="1"></textarea>
+        <button type="submit" class="send" id="sendBtn">Wyślij</button>
+      </form>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const log = document.getElementById('chatLog');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const dot = document.getElementById('statusDot');
+  const modelTag = document.getElementById('modelTag');
+  const chatTitleEl = document.getElementById('chatTitle');
+  const sidebarList = document.getElementById('sidebarList');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const newFolderBtn = document.getElementById('newFolderBtn');
+
+  let history = [];
+  let firstMessage = true;
+  let currentModel = 'deepseek-chat';
+  let activeChatId = null;
+  let folders = [];
+  let chats = [];
+  const collapsedFolders = new Set();
+
+  function addMsg(role, text) {
+    if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = role === 'user' ? 'ty' : 'debrain';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    wrap.appendChild(who);
+    wrap.appendChild(bubble);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return bubble;
+  }
+
+  const TOOL_LABELS = {
+    web_search: 'przeszukuję sieć',
+    read_baza_data: 'czytam dane z Bazy',
+    update_baza_data: 'zapisuję do Bazy',
+    read_calendar: 'sprawdzam kalendarz',
+    create_calendar_event: 'dodaję do kalendarza',
+    read_crm_data: 'czytam dane z CRM',
+    run_python: 'uruchamiam kod Python',
+    run_shell: 'uruchamiam komendę',
+    write_file: 'zapisuję plik',
+    read_file: 'czytam plik',
+    list_files: 'listuję pliki',
+    read_image_text: 'czytam tekst ze zrzutu (OCR)',
+    search_vault: 'przeszukuję skarbiec notatek',
+    sync_baza_notes_to_vault: 'synchronizuję notatki z Bazy',
+  };
+
+  function addAssistantWithSteps() {
+    if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
+    const wrap = document.createElement('div');
+    wrap.className = 'msg assistant';
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = 'debrain';
+    const stepsWrap = document.createElement('div');
+    stepsWrap.className = 'tool-steps';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = 'myślę…';
+    wrap.appendChild(who);
+    wrap.appendChild(stepsWrap);
+    wrap.appendChild(bubble);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return { bubble, stepsWrap };
+  }
+
+  function addToolStep(stepsWrap, name) {
+    const line = document.createElement('div');
+    line.className = 'tool-step';
+    line.dataset.name = name;
+    line.innerHTML = `<span class="spin"></span><span>${TOOL_LABELS[name] || name}…</span>`;
+    stepsWrap.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function finishToolStep(stepsWrap, name) {
+    const lines = stepsWrap.querySelectorAll(`.tool-step[data-name="${name}"]`);
+    const line = lines[lines.length - 1];
+    if (line && !line.classList.contains('done')) {
+      line.classList.add('done');
+      line.querySelector('span:last-child').textContent = (TOOL_LABELS[name] || name);
+    }
+  }
+
+  function renderSidebar() {
+    sidebarList.innerHTML = '';
+
+    const chatItemEl = (c) => {
+      const el = document.createElement('div');
+      el.className = 'chat-item' + (c.id === activeChatId ? ' active' : '');
+      el.innerHTML = `<span class="title">${escapeHtml(c.title)}</span>
+        <span class="chat-actions">
+          <span data-act="rename" title="Zmień nazwę">✎</span>
+          <span data-act="move" title="Przenieś do folderu">📁</span>
+          <span data-act="delete" title="Usuń">✕</span>
+        </span>`;
+      el.addEventListener('click', (e) => {
+        if (e.target.dataset.act) return;
+        loadChat(c.id);
+      });
+      el.querySelector('[data-act="rename"]').addEventListener('click', (e) => { e.stopPropagation(); renameChat(c.id, c.title); });
+      el.querySelector('[data-act="move"]').addEventListener('click', (e) => { e.stopPropagation(); moveChat(c.id); });
+      el.querySelector('[data-act="delete"]').addEventListener('click', (e) => { e.stopPropagation(); deleteChat(c.id); });
+      return el;
+    };
+
+    folders.forEach(f => {
+      const folderEl = document.createElement('div');
+      folderEl.className = 'folder';
+      const collapsed = collapsedFolders.has(f.id);
+      const head = document.createElement('div');
+      head.className = 'folder-head' + (collapsed ? ' collapsed' : '');
+      head.innerHTML = `<span class="arrow">▾</span><span>${escapeHtml(f.name)}</span>
+        <span class="folder-actions">
+          <span data-act="rename" title="Zmień nazwę">✎</span>
+          <span data-act="delete" title="Usuń folder">✕</span>
+        </span>`;
+      head.addEventListener('click', (e) => {
+        if (e.target.dataset.act) return;
+        if (collapsedFolders.has(f.id)) collapsedFolders.delete(f.id); else collapsedFolders.add(f.id);
+        renderSidebar();
+      });
+      head.querySelector('[data-act="rename"]').addEventListener('click', (e) => { e.stopPropagation(); renameFolder(f.id, f.name); });
+      head.querySelector('[data-act="delete"]').addEventListener('click', (e) => { e.stopPropagation(); deleteFolder(f.id); });
+      folderEl.appendChild(head);
+
+      const chatsWrap = document.createElement('div');
+      chatsWrap.className = 'folder-chats' + (collapsed ? ' collapsed' : '');
+      chats.filter(c => c.folderId === f.id).forEach(c => chatsWrap.appendChild(chatItemEl(c)));
+      folderEl.appendChild(chatsWrap);
+      sidebarList.appendChild(folderEl);
+    });
+
+    chats.filter(c => !c.folderId).forEach(c => sidebarList.appendChild(chatItemEl(c)));
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+
+  async function refreshState() {
+    const res = await fetch('/api/state');
+    const data = await res.json();
+    folders = data.folders || [];
+    chats = (data.chats || []).map(c => ({ id: c.id, title: c.title, folderId: c.folder_id, updated: c.updated }));
+    currentModel = data.model || 'deepseek-chat';
+    modelTag.textContent = currentModel;
+    renderSidebar();
+    return data.activeChatId;
+  }
+
+  async function loadChat(chatId) {
+    if (!chatId) return;
+    activeChatId = chatId;
+    await fetch('/api/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId }) });
+
+    const res = await fetch('/api/chats/' + chatId);
+    const data = await res.json();
+    history = data.history || [];
+    chatTitleEl.textContent = data.title || 'Debrain';
+
+    firstMessage = true;
+    if (history.length === 0) {
+      log.innerHTML = '<div class="empty">Nowa rozmowa. Napisz coś, żeby zacząć.</div>';
+    } else {
+      log.innerHTML = '';
+      history.forEach(m => { if (m.content) addMsg(m.role, m.content); });
+    }
+    renderSidebar();
+  }
+
+  async function createNewChat(folderId) {
+    const res = await fetch('/api/chats', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId: folderId || null }),
+    });
+    const data = await res.json();
+    await refreshState();
+    await loadChat(data.id);
+  }
+
+  async function renameChat(chatId, currentTitle) {
+    const title = prompt('Nowa nazwa rozmowy:', currentTitle);
+    if (title === null || !title.trim()) return;
+    await fetch('/api/chats/' + chatId + '/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim() }),
+    });
+    if (chatId === activeChatId) chatTitleEl.textContent = title.trim();
+    await refreshState();
+  }
+
+  async function moveChat(chatId) {
+    if (folders.length === 0) {
+      alert('Nie masz jeszcze żadnego folderu. Utwórz go przyciskiem "+ Nowy folder".');
+      return;
+    }
+    const names = folders.map((f, i) => `${i + 1}. ${f.name}`).join('\n');
+    const choice = prompt('Do którego folderu przenieść? (numer, albo 0 = bez folderu)\n' + names);
+    if (choice === null) return;
+    const idx = parseInt(choice, 10);
+    const folderId = idx === 0 || isNaN(idx) ? null : (folders[idx - 1] ? folders[idx - 1].id : null);
+    await fetch('/api/chats/' + chatId + '/move', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folderId }),
+    });
+    await refreshState();
+  }
+
+  async function deleteChat(chatId) {
+    if (!confirm('Usunąć tę rozmowę? Tego nie da się cofnąć.')) return;
+    const res = await fetch('/api/chats/' + chatId, { method: 'DELETE' });
+    const data = await res.json();
+    await refreshState();
+    if (chatId === activeChatId) {
+      if (data.activeChatId) await loadChat(data.activeChatId);
+      else await createNewChat(null);
+    }
+  }
+
+  async function createNewFolder() {
+    const name = prompt('Nazwa nowego folderu:');
+    if (!name || !name.trim()) return;
+    await fetch('/api/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }),
+    });
+    await refreshState();
+  }
+
+  async function renameFolder(folderId, currentName) {
+    const name = prompt('Nowa nazwa folderu:', currentName);
+    if (name === null || !name.trim()) return;
+    await fetch('/api/folders/' + folderId + '/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }),
+    });
+    await refreshState();
+  }
+
+  async function deleteFolder(folderId) {
+    if (!confirm('Usunąć folder? Rozmowy w środku zostaną, wrócą do listy głównej.')) return;
+    await fetch('/api/folders/' + folderId, { method: 'DELETE' });
+    await refreshState();
+  }
+
+  async function sendToDebrain(text) {
+    addMsg('user', text);
+    history.push({ role: 'user', content: text });
+    sendBtn.disabled = true;
+    dot.classList.add('thinking');
+
+    const { bubble: thinkingBubble, stepsWrap } = addAssistantWithSteps();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: activeChatId, history, model: currentModel }),
+      });
+
+      if (!res.body) {
+        const data = await res.json();
+        thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
+        history = data.history || history;
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let event;
+            try { event = JSON.parse(line); } catch (e) { continue; }
+            if (event.type === 'tool_start') {
+              addToolStep(stepsWrap, event.name);
+            } else if (event.type === 'tool_end') {
+              finishToolStep(stepsWrap, event.name);
+            } else if (event.type === 'final') {
+              thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
+              history = event.history || history;
+              if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
+            } else if (event.error) {
+              thinkingBubble.textContent = 'Błąd: ' + event.error;
+            }
+          }
+        }
+      }
+      await refreshState();
+    } catch (err) {
+      thinkingBubble.textContent = 'Błąd połączenia z lokalnym serwerem: ' + err.message;
+    } finally {
+      sendBtn.disabled = false;
+      dot.classList.remove('thinking');
+      log.scrollTop = log.scrollHeight;
+    }
+  }
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+
+    if (text === '/reasoner') {
+      currentModel = 'deepseek-reasoner';
+      modelTag.textContent = 'deepseek-reasoner';
+      addMsg('assistant', 'Przełączono na deepseek-reasoner — wolniejszy, ale mocniejszy w wieloetapowym rozumowaniu.');
+      return;
+    }
+    if (text === '/chat') {
+      currentModel = 'deepseek-chat';
+      modelTag.textContent = 'deepseek-chat';
+      addMsg('assistant', 'Przełączono z powrotem na deepseek-chat.');
+      return;
+    }
+
+    await sendToDebrain(text);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  newChatBtn.addEventListener('click', () => createNewChat(null));
+  newFolderBtn.addEventListener('click', createNewFolder);
+
+  async function init() {
+    try {
+      const activeId = await refreshState();
+      if (activeId) {
+        await loadChat(activeId);
+      } else if (chats.length > 0) {
+        await loadChat(chats[0].id);
+      } else {
+        await createNewChat(null);
+      }
+
+      if (!activeChatId) {
+        log.innerHTML = '<div class="empty">Nie udało się utworzyć rozmowy. Sprawdź konsolę (F12) i czy lokalny serwer działa poprawnie.</div>';
+        return;
+      }
+
+      const greetRes = await fetch('/api/greeting', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: activeChatId }),
+      });
+      const greetData = await greetRes.json();
+      if (!greetData.skip) {
+        addMsg('assistant', greetData.reply);
+        history = greetData.history;
+        await refreshState();
+      }
+    } catch (err) {
+      log.innerHTML = '<div class="empty">Błąd startu: ' + err.message + '<br>Sprawdź konsolę (F12) i czy lokalny serwer działa.</div>';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

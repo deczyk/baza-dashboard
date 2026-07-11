@@ -1,0 +1,12 @@
+requests
+beautifulsoup4
+python-dotenv
+flask
+
+# Opcjonalnie, tylko jeśli chcesz żeby Debrain czytał tekst ze screenshotów (OCR):
+# pytesseract
+# Pillow
+# + osobno zainstaluj sam program Tesseract-OCR:
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+#   Mac:     brew install tesseract tesseract-lang
+#   Linux:   sudo apt install tesseract-ocr tesseract-ocr-pol
