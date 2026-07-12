@@ -31,6 +31,9 @@ async function loadStore() {
   if (!Array.isArray(store.crmClients)) store.crmClients = [];
   if (!Array.isArray(store.stalledMatters)) store.stalledMatters = [];
   if (!store.behaviorModel || typeof store.behaviorModel !== 'object') store.behaviorModel = {observations:[],version:1};
+  if (!store.settings || typeof store.settings !== 'object') store.settings = {};
+  if (!Array.isArray(store.syncQueue)) store.syncQueue = [];
+  if (!Array.isArray(store.changeHistory)) store.changeHistory = [];
   if (!Array.isArray(store.knowledgeEntries)) {
     const now = new Date().toISOString();
     store.knowledgeEntries = [
@@ -257,6 +260,23 @@ module.exports = async (req, res) => {
 
 
 
+
+
+    case "settingsGet": {
+      res.status(200).json({settings:store.settings||{}});return;
+    }
+    case "settingsSave": {
+      store.settings={...(store.settings||{}),...(p.settings||{}),updatedAt:new Date().toISOString()};
+      store.changeHistory.push({id:"chg_"+newId(),kind:"settings",summary:"Zmieniono ustawienia",createdAt:new Date().toISOString()});
+      store.changeHistory=store.changeHistory.slice(-500);
+      await saveStore(store);res.status(200).json({ok:true,settings:store.settings});return;
+    }
+    case "syncStatus": {
+      res.status(200).json({enabled:store.settings?.syncEnabled!==false,queue:store.syncQueue||[],version:store.version||1});return;
+    }
+    case "changeHistory": {
+      res.status(200).json({items:store.changeHistory||[]});return;
+    }
 
     case "stalledMattersGet": {
       res.status(200).json({items:Array.isArray(store.stalledMatters)?store.stalledMatters:[]});return;

@@ -233,6 +233,187 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 .behavior-editor input,.behavior-editor select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
 @media(max-width:760px){.behavior-editor{grid-template-columns:1fr}}
 
+
+/* Finalne uporządkowanie wyglądu i formatowanie odpowiedzi */
+body{
+  background:#111416!important;
+  color:#ece9e2!important;
+  letter-spacing:0!important;
+}
+header{
+  border-bottom:1px solid #292f33!important;
+  box-shadow:none!important;
+}
+.sidebar{
+  background:#151a1d!important;
+  border-right:1px solid #292f33!important;
+  box-shadow:none!important;
+}
+main{
+  max-width:1100px;
+  width:100%;
+  margin:0 auto;
+  padding:22px 24px 28px!important;
+}
+.msg{
+  margin:0 0 14px!important;
+}
+.msg .who{
+  margin:0 0 5px!important;
+  font-size:10px!important;
+  letter-spacing:.08em!important;
+  opacity:.75;
+}
+.bubble{
+  border-radius:10px!important;
+  border:1px solid #2b3236!important;
+  box-shadow:none!important;
+  padding:12px 14px!important;
+  line-height:1.58!important;
+  font-size:14px!important;
+  overflow-wrap:anywhere;
+}
+.msg.assistant .bubble{
+  background:#191e21!important;
+}
+.msg.user .bubble{
+  background:#24241f!important;
+  border-color:#363427!important;
+}
+.composer{
+  background:#151a1d!important;
+  border-top:1px solid #292f33!important;
+  box-shadow:none!important;
+}
+.composer textarea{
+  border-radius:10px!important;
+  border:1px solid #30373b!important;
+  box-shadow:none!important;
+  line-height:1.45!important;
+}
+button,.sidebar-btn,.code-btn,.role-select{
+  border-radius:8px!important;
+  box-shadow:none!important;
+}
+.modal{
+  border-radius:12px!important;
+  border:1px solid #30373b!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.32)!important;
+}
+
+/* Markdown w odpowiedziach Debraina */
+.markdown-body{
+  white-space:normal;
+}
+.markdown-body > :first-child{margin-top:0!important}
+.markdown-body > :last-child{margin-bottom:0!important}
+.markdown-body p{
+  margin:0 0 10px;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4{
+  color:#f2eee5;
+  line-height:1.25;
+  margin:18px 0 8px;
+  font-weight:750;
+}
+.markdown-body h1{font-size:20px}
+.markdown-body h2{font-size:17px}
+.markdown-body h3{font-size:15px}
+.markdown-body h4{font-size:14px}
+.markdown-body strong{
+  color:#f4d9a1;
+  font-weight:750;
+}
+.markdown-body em{
+  color:#d9d4ca;
+}
+.markdown-body ul,
+.markdown-body ol{
+  margin:7px 0 11px 20px;
+  padding:0;
+}
+.markdown-body li{
+  margin:4px 0;
+  padding-left:2px;
+}
+.markdown-body code{
+  font-family:Consolas,"Cascadia Code",monospace;
+  font-size:.92em;
+  background:#101416;
+  border:1px solid #30373b;
+  border-radius:5px;
+  padding:1px 5px;
+  color:#e6c98f;
+}
+.markdown-body pre{
+  position:relative;
+  background:#0f1315;
+  border:1px solid #30373b;
+  border-radius:9px;
+  padding:12px 14px;
+  margin:10px 0 13px;
+  overflow:auto;
+  white-space:pre;
+}
+.markdown-body pre code{
+  border:0;
+  padding:0;
+  background:transparent;
+  color:#e8e4dc;
+  font-size:12px;
+}
+.markdown-body blockquote{
+  margin:10px 0;
+  padding:8px 12px;
+  border-left:3px solid #b89962;
+  background:#202426;
+  color:#c9c5bc;
+}
+.markdown-body hr{
+  border:0;
+  border-top:1px solid #31383c;
+  margin:16px 0;
+}
+.markdown-body a{
+  color:#a9cbbd;
+  text-decoration:none;
+  border-bottom:1px solid rgba(169,203,189,.35);
+}
+.markdown-body a:hover{
+  border-bottom-color:#a9cbbd;
+}
+.markdown-body .md-table-wrap{
+  overflow-x:auto;
+  margin:10px 0 13px;
+}
+.markdown-body table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.markdown-body th,
+.markdown-body td{
+  border:1px solid #30373b;
+  padding:7px 9px;
+  text-align:left;
+}
+.markdown-body th{
+  background:#20262a;
+  color:#f2eee5;
+}
+.feedback-bar{
+  border-top:1px solid #2c3337!important;
+  margin-top:12px!important;
+  padding-top:9px!important;
+}
+@media(max-width:760px){
+  main{padding:14px 12px 20px!important}
+  .bubble{font-size:13px!important;padding:10px 11px!important}
+}
+
 </style>
 </head>
 <body>
@@ -276,7 +457,13 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 </span>
         <span class="brand-name" id="chatTitle">Debrain</span>
       </div>
-      <div style="display:flex;align-items:center;gap:7px"><button class="sidebar-btn" id="profileBtn" style="width:auto;margin:0">Profil</button><button class="sidebar-btn" id="memoryBtn" style="width:auto;margin:0">Pamięć</button><button class="sidebar-btn" id="dailyStateBtn" style="width:auto;margin:0">Stan dnia</button><button class="sidebar-btn" id="briefBtn" style="width:auto;margin:0">Brief</button><button class="sidebar-btn" id="crmBtn" style="width:auto;margin:0">CRM</button><button class="sidebar-btn" id="stalledBtn" style="width:auto;margin:0">Porzucone</button><button class="sidebar-btn" id="behaviorBtn" style="width:auto;margin:0">Model zachowań</button><select class="role-select" id="roleSelect"><option value="auto">Rola: automatyczna</option><option value="day_assistant">Asystent dnia</option><option value="sales">Doradca sprzedażowy</option><option value="crm">CRM i follow-upy</option><option value="programmer">Programista</option><option value="code_auditor">Audytor kodu</option><option value="business">Doradca biznesowy</option><option value="finance">Analityk finansowy</option><option value="documents">Asystent dokumentów</option><option value="marketing">Marketing</option><option value="strategist">Strateg</option></select><span class="tag" id="modelTag">deepseek-chat</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><button class="sidebar-btn" id="profileBtn" style="width:auto;margin:0">Profil</button><button class="sidebar-btn" id="memoryBtn" style="width:auto;margin:0">Pamięć</button><button class="sidebar-btn" id="dailyStateBtn" style="width:auto;margin:0">Stan dnia</button><button class="sidebar-btn" id="briefBtn" style="width:auto;margin:0">Brief</button><button class="sidebar-btn" id="crmBtn" style="width:auto;margin:0">CRM</button><button class="sidebar-btn" id="stalledBtn" style="width:auto;margin:0">Porzucone</button><button class="sidebar-btn" id="behaviorBtn" style="width:auto;margin:0">Model zachowań</button><select class="role-select" id="roleSelect"><option value="auto">Rola: automatyczna</option><option value="day_assistant">Asystent dnia</option><option value="sales">Doradca sprzedażowy</option><option value="crm">CRM i follow-upy</option><option value="programmer">Programista</option><option value="code_auditor">Audytor kodu</option><option value="business">Doradca biznesowy</option><option value="finance">Analityk finansowy</option><option value="documents">Asystent dokumentów</option><option value="marketing">Marketing</option><option value="strategist">Strateg</option></select><select class="role-select" id="modelSelect">
+<option value="auto">Model: automatyczny</option>
+<option value="deepseek-chat">Debrain Chat</option>
+<option value="deepseek-reasoner">Debrain Reasoner</option>
+<option value="claude">Claude</option>
+<option value="openai">OpenAI</option>
+</select><button class="sidebar-btn" id="personalizationBtn" style="width:auto;margin:0">Personalizacja</button><span class="tag" id="modelTag">auto</span></div>
     </header>
     <main id="chatLog">
       <div class="empty">Ładowanie…</div>
@@ -530,6 +717,23 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
     await loadBehavior();
   });
 
+
+  document.addEventListener('paste',async event=>{
+    const images=Array.from(event.clipboardData?.items||[]).filter(x=>x.type?.startsWith('image/'));
+    if(!images.length)return;
+    event.preventDefault();
+    for(const item of images){
+      const file=item.getAsFile();
+      const reader=new FileReader();
+      reader.onload=()=>{
+        pendingAttachments.push({name:`screenshot_${Date.now()}.png`,url:reader.result,dataUrl:reader.result,ocr:''});
+        renderPendingAttachments();
+      };
+      reader.readAsDataURL(file);
+    }
+    input?.focus();
+  });
+
   const DEBRAIN_PIN = "5855";
 
   function tryUnlock(){
@@ -692,6 +896,116 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 
   function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+
+  function mdEscape(value){
+    const div=document.createElement('div');
+    div.textContent=String(value||'');
+    return div.innerHTML;
+  }
+
+  function mdInline(value){
+    let text=value;
+    text=text.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+    text=text.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+    text=text.replace(/__([^_\n]+)__/g,'<strong>$1</strong>');
+    text=text.replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g,'$1<em>$2</em>');
+    text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return text;
+  }
+
+  function markdownToHtml(source){
+    const codeBlocks=[];
+    let safe=mdEscape(source||'').replace(/\r\n?/g,'\n');
+
+    safe=safe.replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g,(_,lang,code)=>{
+      const token=`@@DEBRAIN_CODE_${codeBlocks.length}@@`;
+      codeBlocks.push(`<pre><code${lang?` data-language="${lang}"`:''}>${code.replace(/\n$/,'')}</code></pre>`);
+      return token;
+    });
+
+    const lines=safe.split('\n');
+    const out=[];
+    let paragraph=[];
+    let listType=null;
+    let listItems=[];
+    let quote=[];
+
+    const flushParagraph=()=>{
+      if(!paragraph.length)return;
+      out.push(`<p>${mdInline(paragraph.join(' '))}</p>`);
+      paragraph=[];
+    };
+    const flushList=()=>{
+      if(!listItems.length)return;
+      const tag=listType==='ol'?'ol':'ul';
+      out.push(`<${tag}>${listItems.map(item=>`<li>${mdInline(item)}</li>`).join('')}</${tag}>`);
+      listItems=[];
+      listType=null;
+    };
+    const flushQuote=()=>{
+      if(!quote.length)return;
+      out.push(`<blockquote>${mdInline(quote.join(' '))}</blockquote>`);
+      quote=[];
+    };
+
+    for(const rawLine of lines){
+      const line=rawLine.trimEnd();
+      const trimmed=line.trim();
+
+      if(/^@@DEBRAIN_CODE_\d+@@$/.test(trimmed)){
+        flushParagraph();flushList();flushQuote();
+        out.push(trimmed);
+        continue;
+      }
+      if(!trimmed){
+        flushParagraph();flushList();flushQuote();
+        continue;
+      }
+      const heading=trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if(heading){
+        flushParagraph();flushList();flushQuote();
+        const level=heading[1].length;
+        out.push(`<h${level}>${mdInline(heading[2])}</h${level}>`);
+        continue;
+      }
+      if(/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)){
+        flushParagraph();flushList();flushQuote();
+        out.push('<hr>');
+        continue;
+      }
+      const unordered=trimmed.match(/^[-+*]\s+(.+)$/);
+      const ordered=trimmed.match(/^\d+[.)]\s+(.+)$/);
+      if(unordered||ordered){
+        flushParagraph();flushQuote();
+        const nextType=ordered?'ol':'ul';
+        if(listType&&listType!==nextType)flushList();
+        listType=nextType;
+        listItems.push((unordered||ordered)[1]);
+        continue;
+      }
+      const quoted=trimmed.match(/^&gt;\s?(.*)$/);
+      if(quoted){
+        flushParagraph();flushList();
+        quote.push(quoted[1]);
+        continue;
+      }
+      paragraph.push(trimmed);
+    }
+
+    flushParagraph();flushList();flushQuote();
+
+    let html=out.join('');
+    codeBlocks.forEach((block,index)=>{
+      html=html.replace(`@@DEBRAIN_CODE_${index}@@`,block);
+    });
+    return html;
+  }
+
+  function renderAssistantMarkdown(element,text){
+    element.classList.add('markdown-body');
+    element.innerHTML=markdownToHtml(text||'');
+  }
+
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
     const wrap = document.createElement('div');
@@ -701,7 +1015,11 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
     who.textContent = role === 'user' ? 'ty' : 'debrain';
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.textContent = text;
+    if(role==='assistant'){
+      renderAssistantMarkdown(bubble,text||'');
+    }else{
+      bubble.textContent=text||'';
+    }
     wrap.appendChild(who);
     wrap.appendChild(bubble);
     log.appendChild(wrap);
@@ -908,7 +1226,11 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 
       if (!res.body) {
         const data = await res.json();
-        thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
+        if(data.reply){
+          renderAssistantMarkdown(thinkingBubble,data.reply);
+        }else{
+          thinkingBubble.textContent='Błąd: '+(data.error||'brak odpowiedzi');
+        }
         history = data.history || history;
       } else {
         const reader = res.body.getReader();
@@ -931,7 +1253,7 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
             } else if (event.type === 'final') {
               if (event.error) { thinkingBubble.textContent = 'Błąd: ' + event.error; }
               else {
-                thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
+                renderAssistantMarkdown(thinkingBubble,event.reply||'Błąd: brak odpowiedzi');
                 history = event.history || history;
                 if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
               }
