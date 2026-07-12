@@ -1274,13 +1274,18 @@ async function loadData(){
   renderAll();
 }
 
+let pendingSave = false;
+
 function queueSave(){
   setSyncStatus(true, 'zapisywanie…');
+  pendingSave = true;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveData, 600);
+  saveTimer = setTimeout(saveData, 300);
 }
 
 async function saveData(){
+  clearTimeout(saveTimer);
+  pendingSave = false;
   try{
     const res = await fetch(API, {
       method:'PUT',
@@ -1293,6 +1298,22 @@ async function saveData(){
     setSyncStatus(false, 'błąd zapisu');
   }
 }
+
+// ---------- Awaryjny natychmiastowy zapis, gdy appka znika z ekranu ----------
+// Na iOS w trybie PWA (dodane do ekranu głównego) system usypia widok appki niemal
+// natychmiast po przełączeniu — szybciej niż zwykłe opóźnienie zapisu (debounce).
+// Bez tego zmiany zrobione tuż przed zamknięciem appki potrafiły się nie zapisać.
+function flushPendingSave(){
+  if(pendingSave){
+    clearTimeout(saveTimer);
+    saveData();
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flushPendingSave();
+});
+window.addEventListener('pagehide', flushPendingSave);
+window.addEventListener('blur', flushPendingSave);
 
 function setSyncStatus(ok, txt){
   document.getElementById('syncDot').classList.toggle('off', !ok);
