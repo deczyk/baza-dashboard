@@ -538,7 +538,8 @@
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    if (e.key === 'Enter' && !e.altKey && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); form.requestSubmit(); }
+    // Alt+Enter (albo Shift/Ctrl+Enter) — nic nie robimy, przeglądarka sama wstawi nową linię
   });
 
   newChatBtn.addEventListener('click', () => createNewChat(null));
