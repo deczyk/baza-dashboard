@@ -538,7 +538,7 @@
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
   });
 
   newChatBtn.addEventListener('click', () => createNewChat(null));
