@@ -26,6 +26,7 @@ async function loadStore() {
   store.memory = store.memory || {}; // { "nazwa-pliku.md": "treść" } — destylowane lekcje
   store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
 
+  if (!Array.isArray(store.learningFeedback)) store.learningFeedback = [];
   if (!Array.isArray(store.knowledgeEntries)) {
     const now = new Date().toISOString();
     store.knowledgeEntries = [
@@ -248,6 +249,22 @@ module.exports = async (req, res) => {
       await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
     }
 
+
+
+    case "learningList": {
+      let items=Array.isArray(store.learningFeedback)?store.learningFeedback:[];
+      if(p.status)items=items.filter(x=>x.status===p.status);
+      res.status(200).json({items});return;
+    }
+    case "learningUpsert": {
+      const raw=p.item||{},now=new Date().toISOString(),id=String(raw.id||("learn_"+newId())),current=(store.learningFeedback||[]).find(x=>x.id===id);
+      const item={...(current||{}),...raw,id,text:String(raw.text||"").trim(),kind:String(raw.kind||"PREFERENCJA").toUpperCase(),status:String(raw.status||"pending"),confidence:Math.max(0,Math.min(1,Number(raw.confidence??0.75))),createdAt:current?.createdAt||raw.createdAt||now,updatedAt:now};
+      if(!item.text){res.status(400).json({error:"Pusta treść reguły."});return;}
+      store.learningFeedback=(store.learningFeedback||[]).filter(x=>x.id!==id);store.learningFeedback.push(item);await saveStore(store);res.status(200).json({ok:true,item});return;
+    }
+    case "learningDelete": {
+      const id=String(p.id||"");store.learningFeedback=(store.learningFeedback||[]).filter(x=>x.id!==id);await saveStore(store);res.status(200).json({ok:true});return;
+    }
 
     // ---------- Pamięć decyzji, faktów i ustaleń ----------
     case "knowledgeList": {
