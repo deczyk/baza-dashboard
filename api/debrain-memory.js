@@ -25,6 +25,16 @@ async function loadStore() {
   store.vault = store.vault || {};   // { "nazwa-pliku.md": "treść" }
   store.memory = store.memory || {}; // { "nazwa-pliku.md": "treść" } — destylowane lekcje
   store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
+
+  if (!Array.isArray(store.knowledgeEntries)) {
+    const now = new Date().toISOString();
+    store.knowledgeEntries = [
+      { id:"knowledge_premium_price", category:"DECYZJA", text:"Domyślna oferta Premium kosztuje 14 500 EUR netto.", source:"ustalenia biznesowe", confidence:1, active:true, createdAt:now, updatedAt:now },
+      { id:"knowledge_offer_order", category:"ZASADA", text:"Najtańszego wariantu nie proponować na początku rozmowy; używać go dopiero przy obiekcji budżetowej.", source:"ustalenia sprzedażowe", confidence:1, active:true, createdAt:now, updatedAt:now },
+      { id:"knowledge_sales_start", category:"STATUS", text:"Sprzedaż mlekomatów ma ruszyć po przygotowaniu wersji pod polski system i walutę.", source:"ustalenia projektu", confidence:0.9, active:true, createdAt:now, updatedAt:now },
+      { id:"knowledge_zip_preference", category:"PREFERENCJA", text:"Przy zmianach technicznych użytkownik preferuje gotową paczkę ZIP i dokładną instrukcję wdrożenia.", source:"potwierdzone zachowanie użytkownika", confidence:1, active:true, createdAt:now, updatedAt:now }
+    ];
+  }
   return store;
 }
 
@@ -234,6 +244,44 @@ module.exports = async (req, res) => {
       item.status = p.resolution === "approve" ? "approved" : "rejected"; item.resolvedAt = new Date().toISOString();
       if (item.status === "approved") { store.profile.approvedObservations = store.profile.approvedObservations || []; if (!store.profile.approvedObservations.includes(item.text)) store.profile.approvedObservations.push(item.text); }
       await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
+    }
+
+
+    // ---------- Pamięć decyzji, faktów i ustaleń ----------
+    case "knowledgeList": {
+      let entries = Array.isArray(store.knowledgeEntries) ? store.knowledgeEntries : [];
+      if (p.category) entries = entries.filter(x => x.category === String(p.category).toUpperCase());
+      if (p.activeOnly) entries = entries.filter(x => x.active !== false);
+      entries.sort((a,b) => String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+      res.status(200).json({ entries }); return;
+    }
+    case "knowledgeUpsert": {
+      const raw = p.entry || {};
+      const text = String(raw.text || "").trim();
+      if (!text) { res.status(400).json({ error: "Pusta treść wpisu." }); return; }
+      const allowed = ["DECYZJA","FAKT","STATUS","ZASADA","PREFERENCJA","CEL","RYZYKO","DO POTWIERDZENIA"];
+      const category = allowed.includes(String(raw.category||"").toUpperCase()) ? String(raw.category).toUpperCase() : "DO POTWIERDZENIA";
+      const now = new Date().toISOString();
+      const id = String(raw.id || ("know_" + newId()));
+      const current = (store.knowledgeEntries || []).find(x => x.id === id);
+      const entry = {
+        ...(current || {}),
+        ...raw,
+        id, category, text,
+        source: String(raw.source || "ręcznie"),
+        confidence: Math.max(0, Math.min(1, Number(raw.confidence ?? 1))),
+        active: raw.active !== false,
+        createdAt: current?.createdAt || raw.createdAt || now,
+        updatedAt: now
+      };
+      store.knowledgeEntries = (store.knowledgeEntries || []).filter(x => x.id !== id);
+      store.knowledgeEntries.push(entry);
+      await saveStore(store); res.status(200).json({ ok:true, entry }); return;
+    }
+    case "knowledgeDelete": {
+      const id = String(p.id || "");
+      store.knowledgeEntries = (store.knowledgeEntries || []).filter(x => x.id !== id);
+      await saveStore(store); res.status(200).json({ ok:true }); return;
     }
 
     default:

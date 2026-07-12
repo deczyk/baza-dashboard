@@ -231,6 +231,33 @@ const TOOLS_SCHEMA = [
   {
     type: "function", function: { name: "suggest_user_observation", description: "Zapisuje niepewną sugestię dotyczącą preferencji lub osobowości użytkownika do późniejszego zatwierdzenia. Używaj tylko przy wyraźnym lub powtarzalnym wzorcu.", parameters: { type: "object", properties: { text: {type:"string"}, category:{type:"string"}, evidence:{type:"string"}, confidence:{type:"number"} }, required:["text"] } }
   },
+  {
+    type: "function",
+    function: {
+      name: "remember_knowledge_entry",
+      description: "Zapisuje ważne, potwierdzone ustalenie do wspólnej pamięci desktop/decz.pl. Używaj dla jasnych decyzji, faktów, statusów, zasad, preferencji, celów i ryzyk.",
+      parameters: {
+        type: "object",
+        properties: {
+          category: { type:"string", enum:["DECYZJA","FAKT","STATUS","ZASADA","PREFERENCJA","CEL","RYZYKO","DO POTWIERDZENIA"] },
+          text: { type:"string" },
+          source: { type:"string" },
+          confidence: { type:"number" },
+          active: { type:"boolean" }
+        },
+        required:["category","text"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_knowledge_entries",
+      description: "Czyta wspólną pamięć decyzji, faktów, statusów, zasad, preferencji, celów i ryzyk.",
+      parameters: { type:"object", properties:{ category:{type:"string"}, active_only:{type:"boolean"} } }
+    }
+  },
+
 ];
 
 // ---------- web_search ----------
@@ -551,6 +578,8 @@ const TOOL_IMPL = {
   write_memory: (args) => toolWriteMemory(args.filename, args.content),
   delete_memory: (args) => toolDeleteMemory(args.filename),
   suggest_user_observation: (args) => memoryStoreAction("profileAddSuggestion", args).then(r => JSON.stringify(r)),
+  remember_knowledge_entry: (args) => memoryStoreAction("knowledgeUpsert", {entry:args}).then(r => JSON.stringify(r)),
+  list_knowledge_entries: (args) => memoryStoreAction("knowledgeList", {category:args.category||"",activeOnly:args.active_only!==false}).then(r => JSON.stringify(r.entries||[])),
 };
 
 function normalizeMessages(messages) {
@@ -605,9 +634,12 @@ module.exports = async (req, res) => {
     const { history, model: requestedModel, chatId, hidden } = req.body;
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let profile = null;
+    let knowledgeEntries = [];
     try { profile = (await memoryStoreAction("profileGet", {})).profile; } catch (_) {}
+    try { knowledgeEntries = (await memoryStoreAction("knowledgeList", {activeOnly:true})).entries || []; } catch (_) {}
     const profileContext = profile ? `\n\nPROFIL UŻYTKOWNIKA (zatwierdzone dane):\n${JSON.stringify({basic:profile.basic,communication:profile.communication,workStyle:profile.workStyle,likes:profile.likes,dislikes:profile.dislikes,motivators:profile.motivators,approvedObservations:profile.approvedObservations}, null, 2)}\nUCZENIE: nie uznawaj pojedynczej wypowiedzi za stałą cechę. Przy wyraźnym lub powtarzalnym wzorcu użyj suggest_user_observation.` : "";
-    let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext }, ...(history || [])];
+    const knowledgeContext = `\n\nPAMIĘĆ DECYZJI, FAKTÓW I USTALEŃ (obowiązujące wpisy):\n${JSON.stringify(knowledgeEntries.slice(0,80).map(x=>({category:x.category,text:x.text,confidence:x.confidence,source:x.source})), null, 2)}\nZASADA: nowe wpisy zapisuj przez remember_knowledge_entry tylko przy jasnym ustaleniu. Niepewne informacje oznaczaj jako DO POTWIERDZENIA.`;
+    let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext + knowledgeContext }, ...(history || [])];
     let finalContent = null;
 
     for (let i = 0; i < 10 && finalContent === null; i++) {
