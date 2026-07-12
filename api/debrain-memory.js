@@ -27,6 +27,10 @@ async function loadStore() {
   store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
 
   if (!Array.isArray(store.learningFeedback)) store.learningFeedback = [];
+  if (!store.dailyState || typeof store.dailyState !== 'object') store.dailyState = {};
+  if (!Array.isArray(store.crmClients)) store.crmClients = [];
+  if (!Array.isArray(store.stalledMatters)) store.stalledMatters = [];
+  if (!store.behaviorModel || typeof store.behaviorModel !== 'object') store.behaviorModel = {observations:[],version:1};
   if (!Array.isArray(store.knowledgeEntries)) {
     const now = new Date().toISOString();
     store.knowledgeEntries = [
@@ -250,6 +254,55 @@ module.exports = async (req, res) => {
     }
 
 
+
+
+
+
+    case "stalledMattersGet": {
+      res.status(200).json({items:Array.isArray(store.stalledMatters)?store.stalledMatters:[]});return;
+    }
+    case "stalledMattersSave": {
+      store.stalledMatters=Array.isArray(p.items)?p.items.slice(0,8):[];
+      await saveStore(store);res.status(200).json({ok:true,items:store.stalledMatters});return;
+    }
+    case "behaviorModelGet": {
+      res.status(200).json({model:store.behaviorModel||{observations:[],version:1}});return;
+    }
+    case "behaviorModelSave": {
+      store.behaviorModel={...(store.behaviorModel||{}),...(p.model||{}),updatedAt:new Date().toISOString()};
+      await saveStore(store);res.status(200).json({ok:true,model:store.behaviorModel});return;
+    }
+
+    case "crmList": {
+      let clients=Array.isArray(store.crmClients)?store.crmClients:[];
+      const f=p.filters||{};
+      if(f.status)clients=clients.filter(x=>x.status===f.status);
+      if(f.stage)clients=clients.filter(x=>x.stage===f.stage);
+      res.status(200).json({clients});return;
+    }
+    case "crmUpsert": {
+      const raw=p.client||{},now=new Date().toISOString(),id=String(raw.id||("crm_"+newId())),current=(store.crmClients||[]).find(x=>x.id===id);
+      const client={id,name:String(raw.name||"").trim(),contactPerson:"",phone:"",email:"",location:"",leadSource:"",product:"",opportunityValue:"",status:"nowy",stage:"lead",lastContact:"",nextFollowUp:"",advisorSent:false,offerSent:false,objections:"",notes:"",history:[],createdAt:current?.createdAt||now,...(current||{}),...raw,updatedAt:now};
+      if(!client.name){res.status(400).json({error:"Nazwa klienta jest wymagana."});return;}
+      store.crmClients=(store.crmClients||[]).filter(x=>x.id!==id);store.crmClients.push(client);await saveStore(store);res.status(200).json({ok:true,client});return;
+    }
+    case "crmDelete": {
+      const id=String(p.id||"");store.crmClients=(store.crmClients||[]).filter(x=>x.id!==id);await saveStore(store);res.status(200).json({ok:true});return;
+    }
+    case "crmAddActivity": {
+      const id=String(p.id||""),client=(store.crmClients||[]).find(x=>x.id===id);if(!client){res.status(404).json({error:"Nie znaleziono klienta."});return;}
+      const a=p.activity||{},text=String(a.text||"").trim();if(!text){res.status(400).json({error:"Treść aktywności jest wymagana."});return;}
+      const item={id:"act_"+newId(),type:String(a.type||"aktywność"),text,date:a.date||new Date().toISOString()};client.history=Array.isArray(client.history)?client.history:[];client.history.push(item);client.lastContact=item.date.slice(0,10);client.updatedAt=new Date().toISOString();await saveStore(store);res.status(200).json({ok:true,client});return;
+    }
+
+    case "dailyStateGet": {
+      res.status(200).json({state:store.dailyState||{}});return;
+    }
+    case "dailyStateSave": {
+      const now=new Date().toISOString();
+      store.dailyState={...(store.dailyState||{}),...(p.state||{}),date:new Date().toISOString().slice(0,10),updatedAt:now};
+      await saveStore(store);res.status(200).json({ok:true,state:store.dailyState});return;
+    }
 
     case "learningList": {
       let items=Array.isArray(store.learningFeedback)?store.learningFeedback:[];

@@ -12,6 +12,33 @@ const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const DEFAULT_MODEL = "deepseek-chat";
 const ALLOWED_MODELS = ["deepseek-chat", "deepseek-reasoner"];
 
+
+const ROLE_DEFINITIONS = {
+  auto:{label:"Automatyczny",style:"Automatycznie dobierz rolę do zadania.",format:"Najpierw wynik, potem konkretne kroki."},
+  day_assistant:{label:"Asystent dnia",style:"Porządkuj dzień, terminy, priorytety i blokery.",format:"Cel dnia → 2–3 priorytety → kolejność działania."},
+  sales:{label:"Doradca sprzedażowy",style:"Analizuj klienta, historię kontaktu, obiekcje i następny krok.",format:"Ocena leada → następny krok → gotowa wiadomość."},
+  crm:{label:"CRM i follow-upy",style:"Pracuj na historii klienta i follow-upach.",format:"Kto czeka → co zrobić dziś → gotowe follow-upy."},
+  programmer:{label:"Programista",style:"Najpierw analiza, potem zmiana i test.",format:"Diagnoza → plan → zmiana → test."},
+  code_auditor:{label:"Audytor kodu",style:"Szukaj błędów, regresji i ryzyk.",format:"Ryzyka → dowody → poprawki."},
+  business:{label:"Doradca biznesowy",style:"Rekomenduj jedną najlepszą opcję.",format:"Rekomendacja → uzasadnienie → następny krok."},
+  finance:{label:"Analityk finansowy",style:"Licz konkretnie i pokazuj założenia.",format:"Wniosek → liczby → założenia → ryzyka."},
+  documents:{label:"Asystent dokumentów",style:"Pracuj precyzyjnie i zachowuj strukturę.",format:"Gotowy dokument → braki."},
+  marketing:{label:"Marketing",style:"Twórz konkretne treści sprzedażowe.",format:"Cel → treść → CTA."},
+  strategist:{label:"Strateg",style:"Myśl długofalowo, ale kończ decyzją.",format:"Kierunek → priorytety → plan."}
+};
+function detectRole(text){
+  const t=String(text||"").toLowerCase();
+  if(/kod|python|html|javascript|css|błąd|bug|repo|git/.test(t))return"programmer";
+  if(/crm|follow.?up|klient|lead|advisor/.test(t))return"crm";
+  if(/sprzedaż|oferta|obiekcj|domkn/.test(t))return"sales";
+  if(/finans|marża|koszt|budżet|leasing|kredyt/.test(t))return"finance";
+  if(/umowa|dokument|pdf|formularz|pismo/.test(t))return"documents";
+  if(/marketing|reklama|facebook|olx|kampania/.test(t))return"marketing";
+  if(/dzisiaj|plan dnia|priorytet|brief|termin/.test(t))return"day_assistant";
+  if(/strateg/.test(t))return"strategist";
+  return"business";
+}
+
 const SYSTEM_PROMPT = `Jesteś Debrain — osobisty agent Kuby, dostępny przez panel webowy na decz.pl.
 
 CHARAKTER: Zwracasz się do Kuby tak, jak Alfred Pennyworth zwracał się do Bruce'a Wayne'a — z nienaganną
@@ -635,11 +662,17 @@ module.exports = async (req, res) => {
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let profile = null;
     let knowledgeEntries = [];
+    let crmClients = [];
     try { profile = (await memoryStoreAction("profileGet", {})).profile; } catch (_) {}
     try { knowledgeEntries = (await memoryStoreAction("knowledgeList", {activeOnly:true})).entries || []; } catch (_) {}
+    try { crmClients = (await memoryStoreAction("crmList", {})).clients || []; } catch (_) {}
     const profileContext = profile ? `\n\nPROFIL UŻYTKOWNIKA (zatwierdzone dane):\n${JSON.stringify({basic:profile.basic,communication:profile.communication,workStyle:profile.workStyle,likes:profile.likes,dislikes:profile.dislikes,motivators:profile.motivators,approvedObservations:profile.approvedObservations}, null, 2)}\nUCZENIE: nie uznawaj pojedynczej wypowiedzi za stałą cechę. Przy wyraźnym lub powtarzalnym wzorcu użyj suggest_user_observation.` : "";
     const knowledgeContext = `\n\nPAMIĘĆ DECYZJI, FAKTÓW I USTALEŃ (obowiązujące wpisy):\n${JSON.stringify(knowledgeEntries.slice(0,80).map(x=>({category:x.category,text:x.text,confidence:x.confidence,source:x.source})), null, 2)}\nZASADA: nowe wpisy zapisuj przez remember_knowledge_entry tylko przy jasnym ustaleniu. Niepewne informacje oznaczaj jako DO POTWIERDZENIA.`;
-    let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext + knowledgeContext }, ...(history || [])];
+    const activeRole = role === "auto" ? detectRole(message) : role;
+    const rd = ROLE_DEFINITIONS[activeRole] || ROLE_DEFINITIONS.business;
+    const roleContext = `\n\nAKTYWNA ROLA: ${rd.label}\nSTYL ROLI: ${rd.style}\nWYMAGANY FORMAT: ${rd.format}`;
+    const crmContext = `\n\nCRM I HISTORIA KLIENTÓW:\n${JSON.stringify(crmClients.slice(0,50).map(x=>({name:x.name,status:x.status,stage:x.stage,product:x.product,value:x.opportunityValue,lastContact:x.lastContact,nextFollowUp:x.nextFollowUp,objections:x.objections})),null,2)}`;
+    let messages = [{ role: "system", content: SYSTEM_PROMPT + roleContext + profileContext + knowledgeContext + crmContext }, ...(history || [])];
     let finalContent = null;
 
     for (let i = 0; i < 10 && finalContent === null; i++) {

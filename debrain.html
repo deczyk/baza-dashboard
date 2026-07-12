@@ -179,6 +179,60 @@
   .memory-actions button { border-radius:7px; padding:6px 9px; cursor:pointer; }
   @media (max-width:640px){ .memory-grid{grid-template-columns:1fr;} }
 
+
+/* Etapy 4–5: schludniejszy, szybszy interfejs */
+:root{
+  --bg:#111416;--surface:#181d20;--surface-2:#20262a;--line:#2a3135;
+  --gold:#c8a66f;--sage:#719c8b;--text:#eeeae2;--text-muted:#929aa0;
+}
+*{scrollbar-width:thin;scrollbar-color:#343c41 transparent}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.sidebar{width:228px;background:#171c1f;border-right:1px solid #272e32}
+header{min-height:54px;padding:10px 18px;background:rgba(17,20,22,.96)}
+main{padding:18px 22px;gap:12px}
+.msg{max-width:min(82%,860px)}
+.bubble{border-radius:10px;padding:10px 13px;line-height:1.5;box-shadow:none!important}
+.msg.user .bubble{background:#28271f;border:1px solid #3a3628}
+.msg.assistant .bubble{background:#1b2023;border:1px solid #293034}
+.composer{background:#171c1f;border-top:1px solid #272e32;padding:12px 18px}
+.composer textarea{background:#20262a!important;border:1px solid #30383d!important;border-radius:10px!important;box-shadow:none!important}
+button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color .12s ease,background .12s ease,color .12s ease}
+.modal{background:#181d20!important;border:1px solid #30373b!important;border-radius:12px!important;box-shadow:0 16px 48px rgba(0,0,0,.35)!important}
+.modal-backdrop{backdrop-filter:blur(3px)}
+.daily-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.daily-field{display:flex;flex-direction:column;gap:5px}
+.daily-field.full{grid-column:1/-1}
+.daily-field label{font-size:11px;color:var(--text-muted)}
+.daily-field input,.daily-field textarea{width:100%;background:#20262a;color:var(--text);border:1px solid #30383d;border-radius:8px;padding:9px;font:inherit}
+.daily-field textarea{min-height:78px;resize:vertical}
+.daily-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.brief-box{white-space:pre-wrap;background:#14181a;border:1px solid #293034;border-radius:10px;padding:14px;line-height:1.55;min-height:120px}
+@media(max-width:760px){.daily-grid{grid-template-columns:1fr}.daily-field.full{grid-column:auto}.msg{max-width:94%}}
+
+
+.role-select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px}
+.crm-layout{display:grid;grid-template-columns:310px 1fr;gap:12px;min-height:560px}
+.crm-list{border:1px solid var(--line);border-radius:10px;overflow:auto;background:var(--surface-2)}
+.crm-card{padding:10px;border-bottom:1px solid var(--line);cursor:pointer}.crm-card:hover,.crm-card.active{background:#252c30}
+.crm-card-title{font-weight:700}.crm-card-meta{font-size:10px;color:var(--text-muted);margin-top:4px}
+.crm-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.crm-form label{font-size:10px;color:var(--text-muted)}.crm-form input,.crm-form textarea,.crm-form select{width:100%;margin-top:4px;background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit}
+.crm-form textarea{min-height:70px;resize:vertical}.crm-full{grid-column:1/-1}.crm-history{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}.crm-history-item{padding:8px;border:1px solid var(--line);border-radius:8px;margin-top:7px;background:var(--surface-2)}
+@media(max-width:850px){.crm-layout{grid-template-columns:1fr}.crm-form{grid-template-columns:1fr}.crm-full{grid-column:auto}}
+
+
+.stalled-list,.behavior-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.stalled-card,.behavior-card{border:1px solid var(--line);border-radius:9px;background:var(--surface-2);padding:11px}
+.stalled-top,.behavior-top{display:flex;gap:8px;align-items:center}
+.stalled-kind,.behavior-type{font-family:var(--font-mono);font-size:10px;color:var(--gold);font-weight:700}
+.stalled-importance{margin-left:auto;font-size:10px;color:var(--text-muted)}
+.stalled-title,.behavior-text{margin-top:7px;font-weight:650}
+.stalled-reason,.behavior-meta{margin-top:5px;color:var(--text-muted);font-size:11px;line-height:1.45}
+.behavior-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+.behavior-editor{display:grid;grid-template-columns:1fr 180px 120px;gap:8px;margin-top:12px}
+.behavior-editor input,.behavior-editor select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
+@media(max-width:760px){.behavior-editor{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -222,7 +276,7 @@
 </span>
         <span class="brand-name" id="chatTitle">Debrain</span>
       </div>
-      <div style="display:flex;align-items:center;gap:7px"><button class="sidebar-btn" id="profileBtn" style="width:auto;margin:0">Profil</button><button class="sidebar-btn" id="memoryBtn" style="width:auto;margin:0">Pamięć</button><span class="tag" id="modelTag">deepseek-chat</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><button class="sidebar-btn" id="profileBtn" style="width:auto;margin:0">Profil</button><button class="sidebar-btn" id="memoryBtn" style="width:auto;margin:0">Pamięć</button><button class="sidebar-btn" id="dailyStateBtn" style="width:auto;margin:0">Stan dnia</button><button class="sidebar-btn" id="briefBtn" style="width:auto;margin:0">Brief</button><button class="sidebar-btn" id="crmBtn" style="width:auto;margin:0">CRM</button><button class="sidebar-btn" id="stalledBtn" style="width:auto;margin:0">Porzucone</button><button class="sidebar-btn" id="behaviorBtn" style="width:auto;margin:0">Model zachowań</button><select class="role-select" id="roleSelect"><option value="auto">Rola: automatyczna</option><option value="day_assistant">Asystent dnia</option><option value="sales">Doradca sprzedażowy</option><option value="crm">CRM i follow-upy</option><option value="programmer">Programista</option><option value="code_auditor">Audytor kodu</option><option value="business">Doradca biznesowy</option><option value="finance">Analityk finansowy</option><option value="documents">Asystent dokumentów</option><option value="marketing">Marketing</option><option value="strategist">Strateg</option></select><span class="tag" id="modelTag">deepseek-chat</span></div>
     </header>
     <main id="chatLog">
       <div class="empty">Ładowanie…</div>
@@ -282,7 +336,200 @@
   </div>
 </div>
 
+
+<div class="modal-backdrop" id="dailyStateModal">
+  <div class="modal" style="max-width:880px">
+    <div class="modal-head"><div class="modal-title">Codzienny stan firmy i użytkownika</div><button class="modal-close" id="dailyStateClose">×</button></div>
+    <div class="daily-grid">
+      <div class="daily-field full"><label>Najważniejszy cel dnia</label><input id="dsMainGoal"></div>
+      <div class="daily-field"><label>2–3 priorytety — jeden na linię</label><textarea id="dsPriorities"></textarea></div>
+      <div class="daily-field"><label>Pilne zadania</label><textarea id="dsUrgent"></textarea></div>
+      <div class="daily-field"><label>Follow-upy</label><textarea id="dsFollowups"></textarea></div>
+      <div class="daily-field"><label>Klienci bez odpowiedzi</label><textarea id="dsClients"></textarea></div>
+      <div class="daily-field"><label>Dzisiejsze terminy</label><textarea id="dsDeadlines"></textarea></div>
+      <div class="daily-field"><label>Blokery</label><textarea id="dsBlockers"></textarea></div>
+      <div class="daily-field"><label>Ważne notatki</label><textarea id="dsNotes"></textarea></div>
+      <div class="daily-field"><label>Porzucone sprawy</label><textarea id="dsAbandoned"></textarea></div>
+      <div class="daily-field full"><label>Ostatnie decyzje</label><textarea id="dsDecisions"></textarea></div>
+    </div>
+    <div class="daily-actions"><button class="sidebar-btn" id="dailySave" style="width:auto">Zapisz stan</button><button class="sidebar-btn" id="dailyRefresh" style="width:auto">Odśwież stan</button><span id="dailyUpdated" style="font-size:11px;color:var(--text-muted);align-self:center"></span></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="briefModal">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-head"><div class="modal-title">Poranny brief</div><button class="modal-close" id="briefClose">×</button></div>
+    <div class="brief-box" id="briefContent">Brak briefu.</div>
+    <div class="daily-actions"><button class="sidebar-btn" id="briefGenerate" style="width:auto">Generuj aktualny brief</button><button class="sidebar-btn" id="briefCopy" style="width:auto">Kopiuj</button></div>
+  </div>
+</div>
+
 <script>
+
+  const dailyStateBtn=document.getElementById('dailyStateBtn'),dailyStateModal=document.getElementById('dailyStateModal'),dailyStateClose=document.getElementById('dailyStateClose');
+  const briefBtn=document.getElementById('briefBtn'),briefModal=document.getElementById('briefModal'),briefClose=document.getElementById('briefClose'),briefContent=document.getElementById('briefContent');
+  const dailyFields={mainGoal:'dsMainGoal',priorities:'dsPriorities',urgentTasks:'dsUrgent',followUps:'dsFollowups',clientsWaiting:'dsClients',todayDeadlines:'dsDeadlines',blockers:'dsBlockers',importantNotes:'dsNotes',abandonedMatters:'dsAbandoned',recentDecisions:'dsDecisions'};
+  const lines=v=>Array.isArray(v)?v.join('\n'):(v||'');
+  const list=v=>String(v||'').split('\n').map(x=>x.trim()).filter(Boolean);
+  function fillDaily(s){Object.entries(dailyFields).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=k==='mainGoal'?(s[k]||''):lines(s[k])});document.getElementById('dailyUpdated').textContent=s.updatedAt?'Aktualizacja: '+new Date(s.updatedAt).toLocaleString():'Jeszcze nie zapisano';}
+  function collectDaily(){const s={};Object.entries(dailyFields).forEach(([k,id])=>{const v=document.getElementById(id)?.value||'';s[k]=k==='mainGoal'?v.trim():list(v)});return s;}
+  async function loadDaily(){const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateGet',payload:{}})});const d=await r.json();fillDaily(d.state||{});return d.state||{};}
+  dailyStateBtn?.addEventListener('click',async()=>{dailyStateModal.classList.add('open');await loadDaily()});
+  dailyStateClose?.addEventListener('click',()=>dailyStateModal.classList.remove('open'));
+  dailyStateModal?.addEventListener('click',e=>{if(e.target===dailyStateModal)dailyStateModal.classList.remove('open')});
+  document.getElementById('dailySave')?.addEventListener('click',async()=>{const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateSave',payload:{state:collectDaily()}})});const d=await r.json();fillDaily(d.state||{});});
+  document.getElementById('dailyRefresh')?.addEventListener('click',async()=>{const state=collectDaily();const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateSave',payload:{state}})});const d=await r.json();fillDaily(d.state||{});});
+  function makeWebBrief(s){const take=(a,n)=>Array.isArray(a)?a.filter(Boolean).slice(0,n):[];const chosen=[...take(s.urgentTasks,3),...take(s.followUps,3),...take(s.clientsWaiting,3),...take(s.priorities,3)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,3);const lines=['PLAN DNIA','','Najważniejsze zadania:'];(chosen.length?chosen:[s.mainGoal||'Ustal najważniejszy cel dnia']).forEach((x,i)=>lines.push(`${i+1}. ${x}`));const contacts=[...take(s.followUps,4),...take(s.clientsWaiting,4)];if(contacts.length){lines.push('','Kontakty i follow-upy:');contacts.slice(0,5).forEach(x=>lines.push('• '+x))}if(take(s.todayDeadlines,4).length){lines.push('','Dzisiejsze terminy:');take(s.todayDeadlines,4).forEach(x=>lines.push('• '+x))}if(take(s.blockers,1).length)lines.push('','Główny bloker: '+s.blockers[0]);if(take(s.importantNotes,2).length){lines.push('','Sedno ważnych notatek:');take(s.importantNotes,2).forEach(x=>lines.push('• '+String(x).slice(0,260)))}lines.push('','Rekomendowana kolejność:','Najpierw zamknij pilne kontakty i działania sprzedażowe. Następnie wykonaj zadanie potrzebne klientom. Dopiero później przejdź do prac organizacyjnych i wizualnych.','','Skup się na jednym konkretnym wyniku naraz.');return lines.join('
+')}
+  async function loadBrief(){const s=await loadDaily();briefContent.textContent=s.brief||makeWebBrief(s)}
+  briefBtn?.addEventListener('click',async()=>{briefModal.classList.add('open');await loadBrief()});
+  briefClose?.addEventListener('click',()=>briefModal.classList.remove('open'));
+  briefModal?.addEventListener('click',e=>{if(e.target===briefModal)briefModal.classList.remove('open')});
+  document.getElementById('briefGenerate')?.addEventListener('click',async()=>{const s=await loadDaily(),brief=makeWebBrief(s);briefContent.textContent=brief;await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateSave',payload:{state:{...s,brief,briefUpdatedAt:new Date().toISOString()}}})})});
+  document.getElementById('briefCopy')?.addEventListener('click',async()=>{await navigator.clipboard.writeText(briefContent.textContent||'')});
+
+
+  const roleSelect=document.getElementById('roleSelect');
+  const savedRole=localStorage.getItem('debrain_role')||'auto'; if(roleSelect){roleSelect.value=savedRole;roleSelect.onchange=()=>localStorage.setItem('debrain_role',roleSelect.value)}
+
+  const crmBtn=document.getElementById('crmBtn'),crmModal=document.getElementById('crmModal'),crmClose=document.getElementById('crmClose'),crmList=document.getElementById('crmList'),crmHistoryList=document.getElementById('crmHistoryList');
+  let crmClients=[],crmCurrent=null;
+  const crmFields={id:'crmId',name:'crmName',contactPerson:'crmContactPerson',phone:'crmPhone',email:'crmEmail',location:'crmLocation',leadSource:'crmLeadSource',product:'crmProduct',opportunityValue:'crmValue',status:'crmStatus',stage:'crmStage',lastContact:'crmLastContact',nextFollowUp:'crmNextFollowUp',objections:'crmObjections',notes:'crmNotes'};
+  function crmEsc(v){const d=document.createElement('div');d.textContent=String(v||'');return d.innerHTML}
+  function crmBlank(){return{id:'',name:'',contactPerson:'',phone:'',email:'',location:'',leadSource:'',product:'',opportunityValue:'',status:'nowy',stage:'lead',lastContact:'',nextFollowUp:'',advisorSent:false,offerSent:false,objections:'',notes:'',history:[]}}
+  function crmFill(c){crmCurrent=c||crmBlank();Object.entries(crmFields).forEach(([k,id])=>{const e=document.getElementById(id);if(e)e.value=crmCurrent[k]||''});document.getElementById('crmAdvisorSent').checked=!!crmCurrent.advisorSent;document.getElementById('crmOfferSent').checked=!!crmCurrent.offerSent;crmHistoryList.innerHTML=(crmCurrent.history||[]).slice().reverse().map(x=>`<div class="crm-history-item"><strong>${crmEsc(x.type||'aktywność')}</strong><div>${crmEsc(x.text)}</div><div class="crm-card-meta">${crmEsc(x.date||'')}</div></div>`).join('')||'<div class="empty">Brak historii.</div>';renderCrmList()}
+  function crmCollect(){const c={...(crmCurrent||{}),history:(crmCurrent||{}).history||[]};Object.entries(crmFields).forEach(([k,id])=>c[k]=document.getElementById(id)?.value||'');c.advisorSent=document.getElementById('crmAdvisorSent').checked;c.offerSent=document.getElementById('crmOfferSent').checked;return c}
+  function renderCrmList(){crmList.innerHTML=crmClients.map(c=>`<div class="crm-card ${crmCurrent?.id===c.id?'active':''}" data-id="${crmEsc(c.id)}"><div class="crm-card-title">${crmEsc(c.name)}</div><div class="crm-card-meta">${crmEsc(c.stage||'')} · ${crmEsc(c.status||'')} · follow-up ${crmEsc(c.nextFollowUp||'—')}</div></div>`).join('')||'<div class="empty">Brak klientów.</div>';crmList.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>crmFill(crmClients.find(c=>c.id===el.dataset.id)))}
+  async function loadCrm(){const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'crmList',payload:{}})});const d=await r.json();crmClients=d.clients||[];document.getElementById('crmSummary').textContent=`Klienci: ${crmClients.length} · wymagają follow-upu: ${crmClients.filter(x=>x.nextFollowUp&&x.nextFollowUp<=new Date().toISOString().slice(0,10)).length}`;if(crmCurrent?.id)crmCurrent=crmClients.find(x=>x.id===crmCurrent.id)||crmBlank();renderCrmList()}
+  crmBtn?.addEventListener('click',async()=>{crmModal.classList.add('open');await loadCrm();if(!crmCurrent)crmFill(crmBlank())});
+  crmClose?.addEventListener('click',()=>crmModal.classList.remove('open'));crmModal?.addEventListener('click',e=>{if(e.target===crmModal)crmModal.classList.remove('open')});
+  document.getElementById('crmNew')?.addEventListener('click',()=>crmFill(crmBlank()));document.getElementById('crmRefresh')?.addEventListener('click',loadCrm);
+  document.getElementById('crmSave')?.addEventListener('click',async()=>{const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'crmUpsert',payload:{client:crmCollect()}})});const d=await r.json();if(!d.ok)return alert(d.error||'Błąd');crmCurrent=d.client;await loadCrm();crmFill(crmCurrent)});
+  document.getElementById('crmDelete')?.addEventListener('click',async()=>{if(!crmCurrent?.id||!confirm('Usunąć klienta?'))return;await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'crmDelete',payload:{id:crmCurrent.id}})});crmCurrent=null;await loadCrm();crmFill(crmBlank())});
+  document.getElementById('crmAddActivity')?.addEventListener('click',async()=>{if(!crmCurrent?.id)return alert('Najpierw zapisz klienta.');const text=document.getElementById('crmActivityText').value.trim();if(!text)return;const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'crmAddActivity',payload:{id:crmCurrent.id,activity:{type:'aktywność',text}}})});const d=await r.json();if(!d.ok)return alert(d.error||'Błąd');document.getElementById('crmActivityText').value='';crmCurrent=d.client;await loadCrm();crmFill(crmCurrent)});
+
+
+  const stalledBtn=document.getElementById('stalledBtn');
+  const stalledModal=document.getElementById('stalledModal');
+  const stalledClose=document.getElementById('stalledClose');
+  const stalledList=document.getElementById('stalledList');
+
+  function safeText(value){
+    const div=document.createElement('div');
+    div.textContent=String(value||'');
+    return div.innerHTML;
+  }
+
+  async function loadStalled(refresh=false){
+    const response=await fetch('/api/debrain-memory',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'stalledMattersGet',payload:{}})
+    });
+    const data=await response.json();
+    const items=data.items||[];
+    stalledList.innerHTML=items.length?items.map(item=>`
+      <div class="stalled-card">
+        <div class="stalled-top">
+          <span class="stalled-kind">${safeText(item.kind)}</span>
+          <span class="stalled-importance">${safeText(item.importance)}</span>
+        </div>
+        <div class="stalled-title">${safeText(item.title)}</div>
+        <div class="stalled-reason">${safeText(item.reason)}</div>
+        ${item.nextStep?`<div class="stalled-reason"><strong>Następny krok:</strong> ${safeText(item.nextStep)}</div>`:''}
+      </div>`).join(''):'<div class="empty">Brak ważnych porzuconych spraw.</div>';
+  }
+
+  stalledBtn?.addEventListener('click',async()=>{stalledModal?.classList.add('open');await loadStalled(false)});
+  stalledClose?.addEventListener('click',()=>stalledModal?.classList.remove('open'));
+  stalledModal?.addEventListener('click',event=>{if(event.target===stalledModal)stalledModal.classList.remove('open')});
+  document.getElementById('stalledRefresh')?.addEventListener('click',()=>loadStalled(true));
+
+  const behaviorBtn=document.getElementById('behaviorBtn');
+  const behaviorModal=document.getElementById('behaviorModal');
+  const behaviorClose=document.getElementById('behaviorClose');
+  const behaviorList=document.getElementById('behaviorList');
+
+  async function loadBehavior(){
+    const response=await fetch('/api/debrain-memory',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'behaviorModelGet',payload:{}})
+    });
+    const data=await response.json();
+    const observations=data.model?.observations||[];
+    behaviorList.innerHTML=observations.length?observations
+      .sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))
+      .map(item=>`
+      <div class="behavior-card">
+        <div class="behavior-top">
+          <span class="behavior-type">${safeText(item.type)}</span>
+          <span class="stalled-importance">${Math.round(Number(item.confidence||0)*100)}% · ${safeText(item.status)}</span>
+        </div>
+        <div class="behavior-text">${safeText(item.text)}</div>
+        <div class="behavior-meta">${safeText(item.context||'')}</div>
+        <div class="behavior-actions">
+          ${item.status!=='approved'?`<button class="approve" data-behavior-action="approve" data-id="${safeText(item.id)}">Zatwierdź</button>`:''}
+          ${item.status!=='rejected'?`<button class="reject" data-behavior-action="reject" data-id="${safeText(item.id)}">Odrzuć</button>`:''}
+          <button class="reject" data-behavior-action="delete" data-id="${safeText(item.id)}">Usuń</button>
+        </div>
+      </div>`).join(''):'<div class="empty">Brak obserwacji.</div>';
+
+    behaviorList.querySelectorAll('[data-behavior-action]').forEach(button=>{
+      button.onclick=async()=>{
+        const id=button.dataset.id;
+        const action=button.dataset.behaviorAction;
+        const modelResponse=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelGet',payload:{}})});
+        const modelData=await modelResponse.json();
+        const model=modelData.model||{observations:[]};
+        if(action==='delete'){
+          model.observations=(model.observations||[]).filter(x=>x.id!==id);
+        }else{
+          model.observations=(model.observations||[]).map(x=>x.id===id?{...x,status:action==='approve'?'approved':'rejected',updatedAt:new Date().toISOString()}:x);
+        }
+        await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelSave',payload:{model}})});
+        await loadBehavior();
+      };
+    });
+  }
+
+  behaviorBtn?.addEventListener('click',async()=>{behaviorModal?.classList.add('open');await loadBehavior()});
+  behaviorClose?.addEventListener('click',()=>behaviorModal?.classList.remove('open'));
+  behaviorModal?.addEventListener('click',event=>{if(event.target===behaviorModal)behaviorModal.classList.remove('open')});
+
+  document.getElementById('behaviorAdd')?.addEventListener('click',async()=>{
+    const text=document.getElementById('behaviorText')?.value.trim();
+    if(!text)return alert('Wpisz obserwację.');
+    const modelResponse=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelGet',payload:{}})});
+    const modelData=await modelResponse.json();
+    const model=modelData.model||{observations:[]};
+    model.observations=Array.isArray(model.observations)?model.observations:[];
+    model.observations.push({
+      id:'behavior_'+Date.now(),
+      text,
+      type:document.getElementById('behaviorType')?.value||'PRZYPUSZCZENIE',
+      confidence:0.5,status:'suggested',
+      context:'Dodane ręcznie przez użytkownika.',
+      createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+    });
+    await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelSave',payload:{model}})});
+    document.getElementById('behaviorText').value='';
+    await loadBehavior();
+  });
+
+  document.getElementById('behaviorInfer')?.addEventListener('click',async()=>{
+    const response=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelGet',payload:{}})});
+    const data=await response.json();const model=data.model||{observations:[]};model.observations=model.observations||[];
+    const suggestions=[
+      'Użytkownik szybciej działa, gdy dostaje jeden konkretny następny krok.',
+      'Zbyt wiele równorzędnych opcji spowalnia podjęcie decyzji.',
+      'Przy zadaniach technicznych użytkownik preferuje gotowe pliki zamiast samej instrukcji.',
+      'Przy sprawach biznesowych użytkownik oczekuje najpierw rekomendacji.'
+    ];
+    const existing=new Set(model.observations.map(x=>String(x.text||'').toLowerCase()));
+    suggestions.forEach(text=>{if(!existing.has(text.toLowerCase()))model.observations.push({id:'behavior_'+Date.now()+'_'+Math.random(),text,type:'STAŁA PREFERENCJA',confidence:0.85,status:'suggested',context:'Wniosek na podstawie powtarzalnego zachowania.',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()})});
+    await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'behaviorModelSave',payload:{model}})});
+    await loadBehavior();
+  });
+
   const DEBRAIN_PIN = "5855";
 
   function tryUnlock(){
