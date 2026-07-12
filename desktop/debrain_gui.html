@@ -484,7 +484,7 @@
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       form.requestSubmit();
     }
@@ -494,32 +494,23 @@
   newFolderBtn.addEventListener('click', createNewFolder);
 
   async function init() {
-    try {
-      const activeId = await refreshState();
-      if (activeId) {
-        await loadChat(activeId);
-      } else if (chats.length > 0) {
-        await loadChat(chats[0].id);
-      } else {
-        await createNewChat(null);
-      }
+    const activeId = await refreshState();
+    if (activeId) {
+      await loadChat(activeId);
+    } else if (chats.length > 0) {
+      await loadChat(chats[0].id);
+    } else {
+      await createNewChat(null);
+    }
 
-      if (!activeChatId) {
-        log.innerHTML = '<div class="empty">Nie udało się utworzyć rozmowy. Sprawdź konsolę (F12) i czy lokalny serwer działa poprawnie.</div>';
-        return;
-      }
-
-      const greetRes = await fetch('/api/greeting', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: activeChatId }),
-      });
-      const greetData = await greetRes.json();
-      if (!greetData.skip) {
-        addMsg('assistant', greetData.reply);
-        history = greetData.history;
-        await refreshState();
-      }
-    } catch (err) {
-      log.innerHTML = '<div class="empty">Błąd startu: ' + err.message + '<br>Sprawdź konsolę (F12) i czy lokalny serwer działa.</div>';
+    const greetRes = await fetch('/api/greeting', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chatId: activeChatId }),
+    });
+    const greetData = await greetRes.json();
+    if (!greetData.skip) {
+      addMsg('assistant', greetData.reply);
+      history = greetData.history;
+      await refreshState();
     }
   }
 
