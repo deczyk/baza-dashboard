@@ -67,7 +67,9 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { action, payload } = req.body || {};
+  const body = req.body || {};
+  const action = body.action || req.query?.action || "";
+  const payload = body.payload || body.data || {};
   const store = await loadStore();
   const p = payload || {};
 
@@ -285,6 +287,6 @@ module.exports = async (req, res) => {
     }
 
     default:
-      res.status(400).json({ error: "Nieznana akcja." });
+      res.status(400).json({ error: `Nieznana akcja: ${action || "(brak)"}` });
   }
 };
