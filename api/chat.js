@@ -228,6 +228,9 @@ const TOOLS_SCHEMA = [
       parameters: { type: "object", properties: { filename: { type: "string" } }, required: ["filename"] },
     },
   },
+  {
+    type: "function", function: { name: "suggest_user_observation", description: "Zapisuje niepewną sugestię dotyczącą preferencji lub osobowości użytkownika do późniejszego zatwierdzenia. Używaj tylko przy wyraźnym lub powtarzalnym wzorcu.", parameters: { type: "object", properties: { text: {type:"string"}, category:{type:"string"}, evidence:{type:"string"}, confidence:{type:"number"} }, required:["text"] } }
+  },
 ];
 
 // ---------- web_search ----------
@@ -547,13 +550,38 @@ const TOOL_IMPL = {
   read_memory: (args) => toolReadMemory(args.filename),
   write_memory: (args) => toolWriteMemory(args.filename, args.content),
   delete_memory: (args) => toolDeleteMemory(args.filename),
+  suggest_user_observation: (args) => memoryStoreAction("profileAddSuggestion", args).then(r => JSON.stringify(r)),
 };
 
+function normalizeMessages(messages) {
+  const raw = (messages || []).filter(m => ["system","user","assistant","tool"].includes(m.role)).map(m => {
+    const x = { role: m.role, content: m.content == null ? "" : m.content };
+    for (const k of ["tool_calls","tool_call_id","name","reasoning_content"]) if (m[k] != null) x[k] = m[k];
+    return x;
+  });
+  const out=[];
+  for(let i=0;i<raw.length;){
+    const m=raw[i];
+    if(m.role==="assistant" && m.tool_calls){
+      const expected=m.tool_calls.map(t=>t.id).filter(Boolean), tools=[]; let j=i+1;
+      while(j<raw.length && raw[j].role==="tool"){tools.push(raw[j]);j++;}
+      const got=new Set(tools.map(t=>t.tool_call_id));
+      if(expected.length && expected.every(id=>got.has(id))){out.push(m,...tools);}
+      i=j; continue;
+    }
+    if(m.role!=="tool") out.push(m);
+    i++;
+  }
+  return out;
+}
+
 async function callDeepSeek(messages, model) {
+  const payload = { model, messages: normalizeMessages(messages), tools: TOOLS_SCHEMA };
+  if (model !== "deepseek-reasoner") payload.temperature = 0.4;
   const resp = await fetch(DEEPSEEK_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, tools: TOOLS_SCHEMA, temperature: 0.4 }),
+    body: JSON.stringify(payload),
   });
   if (!resp.ok) {
     const errText = await resp.text();
@@ -576,7 +604,10 @@ module.exports = async (req, res) => {
   try {
     const { history, model: requestedModel, chatId, hidden } = req.body;
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
-    let messages = [{ role: "system", content: SYSTEM_PROMPT }, ...(history || [])];
+    let profile = null;
+    try { profile = (await memoryStoreAction("profileGet", {})).profile; } catch (_) {}
+    const profileContext = profile ? `\n\nPROFIL UŻYTKOWNIKA (zatwierdzone dane):\n${JSON.stringify({basic:profile.basic,communication:profile.communication,workStyle:profile.workStyle,likes:profile.likes,dislikes:profile.dislikes,motivators:profile.motivators,approvedObservations:profile.approvedObservations}, null, 2)}\nUCZENIE: nie uznawaj pojedynczej wypowiedzi za stałą cechę. Przy wyraźnym lub powtarzalnym wzorcu użyj suggest_user_observation.` : "";
+    let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext }, ...(history || [])];
     let finalContent = null;
 
     for (let i = 0; i < 10 && finalContent === null; i++) {

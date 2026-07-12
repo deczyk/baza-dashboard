@@ -24,6 +24,7 @@ async function loadStore() {
   store.lastGreetingDate = store.lastGreetingDate || null;
   store.vault = store.vault || {};   // { "nazwa-pliku.md": "treść" }
   store.memory = store.memory || {}; // { "nazwa-pliku.md": "treść" } — destylowane lekcje
+  store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
   return store;
 }
 
@@ -205,6 +206,34 @@ module.exports = async (req, res) => {
       await saveStore(store);
       res.status(200).json({ ok: true });
       return;
+    }
+
+
+    // ---------- Profil użytkownika i osobowość ----------
+    case "profileGet": {
+      res.status(200).json({ profile: store.profile }); return;
+    }
+    case "profileSave": {
+      store.profile = { ...store.profile, ...(p.profile || {}), updatedAt: new Date().toISOString() };
+      store.profile.suggestions = store.profile.suggestions || [];
+      store.profile.approvedObservations = store.profile.approvedObservations || [];
+      await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
+    }
+    case "profileAddSuggestion": {
+      const text = String(p.text || "").trim();
+      if (!text) { res.status(400).json({ error: "Pusta sugestia." }); return; }
+      store.profile.suggestions = store.profile.suggestions || [];
+      const duplicate = store.profile.suggestions.find(x => x.status === "pending" && String(x.text).toLowerCase() === text.toLowerCase());
+      if (duplicate) { res.status(200).json({ ok: true, duplicate: true, suggestion: duplicate }); return; }
+      const suggestion = { id: "sug_" + newId(), text, category: p.category || "osobowość", evidence: p.evidence || "", confidence: Number(p.confidence || 0.6), status: "pending", createdAt: new Date().toISOString() };
+      store.profile.suggestions.push(suggestion); await saveStore(store); res.status(200).json({ ok: true, suggestion }); return;
+    }
+    case "profileResolveSuggestion": {
+      const item = (store.profile.suggestions || []).find(x => x.id === p.suggestionId);
+      if (!item) { res.status(404).json({ error: "Nie znaleziono sugestii." }); return; }
+      item.status = p.resolution === "approve" ? "approved" : "rejected"; item.resolvedAt = new Date().toISOString();
+      if (item.status === "approved") { store.profile.approvedObservations = store.profile.approvedObservations || []; if (!store.profile.approvedObservations.includes(item.text)) store.profile.approvedObservations.push(item.text); }
+      await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
     }
 
     default:

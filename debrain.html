@@ -201,6 +201,17 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<div class="modal-backdrop" id="profileModal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Mój profil i osobowość</div><button class="modal-close" id="profileModalClose">×</button></div>
+    <p style="color:var(--text-muted);font-size:12px;line-height:1.5">Profil jest wspólny dla komputera i decz.pl. Sugestie nie stają się stałą cechą, dopóki ich nie zatwierdzisz.</p>
+    <div id="profileFields"></div>
+    <div style="display:flex;gap:8px;margin:14px 0"><button class="sidebar-btn" id="profileSaveBtn" style="width:auto">Zapisz profil</button></div>
+    <div class="modal-title" style="font-size:14px;margin-top:18px">Sugestie dotyczące użytkownika</div>
+    <div id="profileSuggestions"><div class="empty">Brak sugestii.</div></div>
+  </div>
+</div>
 <script>
   const DEBRAIN_PIN = "5855";
 
@@ -226,6 +237,12 @@
 
   // ---------- Stan ----------
   const log = document.getElementById('chatLog');
+  const profileBtn = document.getElementById('profileBtn');
+  const profileModal = document.getElementById('profileModal');
+  const profileModalClose = document.getElementById('profileModalClose');
+  const profileFields = document.getElementById('profileFields');
+  const profileSuggestions = document.getElementById('profileSuggestions');
+  const profileSaveBtn = document.getElementById('profileSaveBtn');
   const form = document.getElementById('chatForm');
   const input = document.getElementById('input');
   const sendBtn = document.getElementById('sendBtn');
@@ -240,6 +257,45 @@
   const ocrStatus = document.getElementById('ocrStatus');
   const sidebar = document.getElementById('sidebar');
   const menuBtn = document.getElementById('menuBtn');
+
+  let currentProfile = null;
+  function profileTextarea(label, key, value) {
+    return `<label style="display:block;margin:10px 0 4px;font-size:12px;color:var(--text-muted)">${label}</label><textarea data-profile-key="${key}" style="width:100%;min-height:66px;background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px">${String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>`;
+  }
+  async function loadProfile() {
+    const res = await fetch('/api/debrain-memory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profileGet',payload:{}})});
+    const data = await res.json(); currentProfile = data.profile || {};
+    const p=currentProfile;
+    profileFields.innerHTML =
+      profileTextarea('Dane podstawowe i firma','basic',JSON.stringify(p.basic||{},null,2)) +
+      profileTextarea('Styl komunikacji','communication',JSON.stringify(p.communication||{},null,2)) +
+      profileTextarea('Sposób pracy i priorytety','workStyle',JSON.stringify(p.workStyle||{},null,2)) +
+      profileTextarea('Co lubię','likes',(p.likes||[]).join('\n')) +
+      profileTextarea('Czego nie lubię','dislikes',(p.dislikes||[]).join('\n')) +
+      profileTextarea('Co mnie motywuje','motivators',(p.motivators||[]).join('\n')) +
+      profileTextarea('Zatwierdzone obserwacje','approvedObservations',(p.approvedObservations||[]).join('\n'));
+    const pending=(p.suggestions||[]).filter(x=>x.status==='pending');
+    profileSuggestions.innerHTML = pending.length ? pending.map(x=>`<div class="proposal" style="margin-top:8px"><div class="proposal-summary">${x.text}</div><div class="proposal-meta">${x.category||'osobowość'} · pewność ${Math.round((x.confidence||0)*100)}%</div><div class="proposal-actions"><button class="approve" data-sug="${x.id}" data-action="approve">Zatwierdź</button><button class="reject" data-sug="${x.id}" data-action="reject">Odrzuć</button></div></div>`).join('') : '<div class="empty">Brak sugestii.</div>';
+    profileSuggestions.querySelectorAll('[data-sug]').forEach(btn=>btn.onclick=async()=>{
+      const id=btn.dataset.sug, action=btn.dataset.action;
+      const url='/api/debrain-memory';
+      const body={action:'profileResolveSuggestion',payload:{suggestionId:id,resolution:action}};
+      await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); await loadProfile();
+    });
+  }
+  profileBtn?.addEventListener('click',async()=>{profileModal.classList.add('open');await loadProfile();});
+  profileModalClose?.addEventListener('click',()=>profileModal.classList.remove('open'));
+  profileModal?.addEventListener('click',e=>{if(e.target===profileModal)profileModal.classList.remove('open');});
+  profileSaveBtn?.addEventListener('click',async()=>{
+    const next={...currentProfile};
+    profileFields.querySelectorAll('[data-profile-key]').forEach(el=>{
+      const k=el.dataset.profileKey;
+      if(['basic','communication','workStyle'].includes(k)){try{next[k]=JSON.parse(el.value)}catch(e){throw new Error('Niepoprawny JSON w sekcji '+k)}}
+      else next[k]=el.value.split('\n').map(x=>x.trim()).filter(Boolean);
+    });
+    const opts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'profileSave',payload:{profile:next}})};
+    const r=await fetch('/api/debrain-memory',opts); const d=await r.json(); if(d.error||d.ok===false)alert(d.error||'Błąd zapisu'); else{currentProfile=d.profile||next;alert('Profil zapisany i zsynchronizowany.');}
+  });
 
   let history = [];
   let firstMessage = true;
