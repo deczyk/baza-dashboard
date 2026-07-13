@@ -233,6 +233,57 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 .behavior-editor input,.behavior-editor select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
 @media(max-width:760px){.behavior-editor{grid-template-columns:1fr}}
 
+
+/* Czytelne formatowanie odpowiedzi Debraina */
+.markdown-body{white-space:normal;line-height:1.58}
+.markdown-body>*:first-child{margin-top:0}
+.markdown-body>*:last-child{margin-bottom:0}
+.markdown-body p{margin:0 0 10px}
+.markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4{
+  margin:16px 0 8px;line-height:1.25;color:var(--text);font-weight:750
+}
+.markdown-body h1{font-size:20px}.markdown-body h2{font-size:17px}
+.markdown-body h3{font-size:15px}.markdown-body h4{font-size:14px}
+.markdown-body strong{font-weight:800;color:var(--gold)}
+.markdown-body em{font-style:italic}
+.markdown-body ul,.markdown-body ol{margin:7px 0 11px 22px;padding:0}
+.markdown-body li{margin:4px 0}
+.markdown-body code{
+  font-family:Consolas,"Cascadia Code",monospace;
+  background:#111619;border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font-size:.92em
+}
+.markdown-body pre{
+  margin:10px 0 13px;padding:12px 14px;overflow:auto;
+  background:#101416;border:1px solid var(--line);border-radius:9px;
+  white-space:pre-wrap
+}
+.markdown-body pre code{padding:0;border:0;background:transparent}
+.markdown-body blockquote{
+  margin:10px 0;padding:8px 12px;border-left:3px solid var(--gold);
+  background:var(--surface-2);color:var(--text-muted)
+}
+.markdown-body a{color:#9bcbb7;text-decoration:underline}
+.markdown-body hr{border:0;border-top:1px solid var(--line);margin:15px 0}
+
+.emoji-wrap{position:relative}
+.emoji-btn{
+  border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  border-radius:8px;padding:8px 10px;cursor:pointer;font-size:17px
+}
+.emoji-picker{
+  display:none;position:absolute;bottom:46px;left:0;z-index:50;
+  width:260px;max-height:210px;overflow:auto;padding:9px;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 14px 34px rgba(0,0,0,.35)
+}
+.emoji-picker.open{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.emoji-picker button{
+  border:0;background:transparent;font-size:21px;line-height:1;
+  padding:6px;border-radius:6px;cursor:pointer
+}
+.emoji-picker button:hover{background:var(--surface-2)}
+
 </style>
 </head>
 <body>
@@ -289,7 +340,7 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
     </main>
     <footer>
       <form id="chatForm">
-        <button type="button" class="attach" id="attachBtn" title="Załącz zrzut ekranu (OCR)">📎</button>
+        <span class="emoji-wrap"><button type="button" class="emoji-btn" id="emojiBtn" title="Wstaw emoji">😊</button><span class="emoji-picker" id="emojiPicker"></span></span><button type="button" class="attach" id="attachBtn" title="Załącz zrzut ekranu (OCR)">📎</button>
         <input type="file" id="imageInput" accept="image/*" style="display:none">
         <textarea id="input" placeholder="Zapytaj Debrain… (/reasoner, /chat)" rows="1"></textarea>
         <button type="submit" class="send" id="sendBtn">Wyślij</button>
@@ -299,7 +350,12 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">  if(document.readyState==='loading'){
+    window.addEventListener('DOMContentLoaded',setupEmojiPicker,{once:true});
+  }else{
+    setupEmojiPicker();
+  }
+</script>
 
 <div class="modal-backdrop" id="profileModal">
   <div class="modal">
@@ -739,6 +795,150 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 
   function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+
+  function escapeMarkdownHtml(value){
+    return String(value??'')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+  }
+
+  function renderInlineMarkdown(value){
+    let text=value;
+    const code=[];
+    text=text.replace(/`([^`\n]+)`/g,(_,content)=>{
+      const token=`@@INLINE_CODE_${code.length}@@`;
+      code.push(`<code>${content}</code>`);
+      return token;
+    });
+    text=text.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+    text=text.replace(/__([^_\n]+)__/g,'<strong>$1</strong>');
+    text=text.replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g,'$1<em>$2</em>');
+    text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    code.forEach((html,index)=>{text=text.replace(`@@INLINE_CODE_${index}@@`,html)});
+    return text;
+  }
+
+  function markdownToHtml(source){
+    const blocks=[];
+    let safe=escapeMarkdownHtml(source).replace(/\r\n?/g,'\n');
+    safe=safe.replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g,(_,lang,content)=>{
+      const token=`@@CODE_BLOCK_${blocks.length}@@`;
+      blocks.push(`<pre><code${lang?` data-language="${lang}"`:''}>${content.replace(/\n$/,'')}</code></pre>`);
+      return token;
+    });
+
+    const output=[];
+    let paragraph=[];
+    let listType=null;
+    let listItems=[];
+    let quote=[];
+
+    const flushParagraph=()=>{
+      if(!paragraph.length)return;
+      output.push(`<p>${renderInlineMarkdown(paragraph.join(' '))}</p>`);
+      paragraph=[];
+    };
+    const flushList=()=>{
+      if(!listItems.length)return;
+      const tag=listType==='ol'?'ol':'ul';
+      output.push(`<${tag}>${listItems.map(item=>`<li>${renderInlineMarkdown(item)}</li>`).join('')}</${tag}>`);
+      listItems=[];listType=null;
+    };
+    const flushQuote=()=>{
+      if(!quote.length)return;
+      output.push(`<blockquote>${renderInlineMarkdown(quote.join(' '))}</blockquote>`);
+      quote=[];
+    };
+
+    for(const raw of safe.split('\n')){
+      const line=raw.trimEnd();
+      const trimmed=line.trim();
+
+      if(/^@@CODE_BLOCK_\d+@@$/.test(trimmed)){
+        flushParagraph();flushList();flushQuote();output.push(trimmed);continue;
+      }
+      if(!trimmed){flushParagraph();flushList();flushQuote();continue}
+
+      const heading=trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if(heading){
+        flushParagraph();flushList();flushQuote();
+        const level=heading[1].length;
+        output.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+        continue;
+      }
+      if(/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)){
+        flushParagraph();flushList();flushQuote();output.push('<hr>');continue;
+      }
+      const unordered=trimmed.match(/^[-+*]\s+(.+)$/);
+      const ordered=trimmed.match(/^\d+[.)]\s+(.+)$/);
+      if(unordered||ordered){
+        flushParagraph();flushQuote();
+        const nextType=ordered?'ol':'ul';
+        if(listType&&listType!==nextType)flushList();
+        listType=nextType;
+        listItems.push((unordered||ordered)[1]);
+        continue;
+      }
+      const quoted=trimmed.match(/^&gt;\s?(.*)$/);
+      if(quoted){
+        flushParagraph();flushList();quote.push(quoted[1]);continue;
+      }
+      paragraph.push(trimmed);
+    }
+
+    flushParagraph();flushList();flushQuote();
+    let html=output.join('');
+    blocks.forEach((block,index)=>{html=html.replace(`@@CODE_BLOCK_${index}@@`,block)});
+    return html;
+  }
+
+  function renderAssistantText(element,text){
+    element.classList.add('markdown-body');
+    element.innerHTML=markdownToHtml(text||'');
+  }
+
+  function insertAtCursor(field,text){
+    const start=field.selectionStart??field.value.length;
+    const end=field.selectionEnd??field.value.length;
+    field.setRangeText(text,start,end,'end');
+    field.dispatchEvent(new Event('input',{bubbles:true}));
+    field.focus();
+  }
+
+  function setupEmojiPicker(){
+    const input=document.getElementById('input');
+    const picker=document.getElementById('emojiPicker');
+    const button=document.getElementById('emojiBtn');
+    if(!input||!picker||!button)return;
+
+    const emojis=[
+      '😀','😁','😂','🤣','😊','😍','🙂','😉','😎','🤔','😅','😢','😡','👍',
+      '👎','👏','🙏','💪','🤝','✅','❌','⚠️','🔥','⭐','💡','📌','📞','📧',
+      '📅','📝','💰','📈','🚜','🐄','🥛','🏠','🛠️','🇵🇱','🎯','🚀','❤️','🤖'
+    ];
+    picker.innerHTML='';
+    emojis.forEach(emoji=>{
+      const item=document.createElement('button');
+      item.type='button';
+      item.textContent=emoji;
+      item.title='Wstaw '+emoji;
+      item.addEventListener('click',()=>{
+        insertAtCursor(input,emoji);
+        picker.classList.remove('open');
+      });
+      picker.appendChild(item);
+    });
+    button.addEventListener('click',event=>{
+      event.stopPropagation();
+      picker.classList.toggle('open');
+    });
+    document.addEventListener('click',event=>{
+      if(!picker.contains(event.target)&&event.target!==button)picker.classList.remove('open');
+    });
+  }
+
+
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
     const wrap = document.createElement('div');
@@ -748,7 +948,11 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
     who.textContent = role === 'user' ? 'ty' : 'debrain';
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.textContent = text;
+    if(role==='assistant'){
+      renderAssistantText(bubble,text||'');
+    }else{
+      bubble.textContent=text||'';
+    }
     wrap.appendChild(who);
     wrap.appendChild(bubble);
     log.appendChild(wrap);
@@ -955,7 +1159,11 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 
       if (!res.body) {
         const data = await res.json();
-        thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
+        if(data.reply){
+          renderAssistantText(thinkingBubble,data.reply);
+        }else{
+          thinkingBubble.textContent='Błąd: '+(data.error||'brak odpowiedzi');
+        }
         history = data.history || history;
       } else {
         const reader = res.body.getReader();
@@ -978,7 +1186,7 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
             } else if (event.type === 'final') {
               if (event.error) { thinkingBubble.textContent = 'Błąd: ' + event.error; }
               else {
-                thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
+                renderAssistantText(thinkingBubble,event.reply||'Błąd: brak odpowiedzi');
                 history = event.history || history;
                 if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
               }
