@@ -233,187 +233,6 @@ button,.sidebar-btn,.code-btn{box-shadow:none!important;transition:border-color 
 .behavior-editor input,.behavior-editor select{background:var(--surface-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
 @media(max-width:760px){.behavior-editor{grid-template-columns:1fr}}
 
-
-/* Finalne uporządkowanie wyglądu i formatowanie odpowiedzi */
-body{
-  background:#111416!important;
-  color:#ece9e2!important;
-  letter-spacing:0!important;
-}
-header{
-  border-bottom:1px solid #292f33!important;
-  box-shadow:none!important;
-}
-.sidebar{
-  background:#151a1d!important;
-  border-right:1px solid #292f33!important;
-  box-shadow:none!important;
-}
-main{
-  max-width:1100px;
-  width:100%;
-  margin:0 auto;
-  padding:22px 24px 28px!important;
-}
-.msg{
-  margin:0 0 14px!important;
-}
-.msg .who{
-  margin:0 0 5px!important;
-  font-size:10px!important;
-  letter-spacing:.08em!important;
-  opacity:.75;
-}
-.bubble{
-  border-radius:10px!important;
-  border:1px solid #2b3236!important;
-  box-shadow:none!important;
-  padding:12px 14px!important;
-  line-height:1.58!important;
-  font-size:14px!important;
-  overflow-wrap:anywhere;
-}
-.msg.assistant .bubble{
-  background:#191e21!important;
-}
-.msg.user .bubble{
-  background:#24241f!important;
-  border-color:#363427!important;
-}
-.composer{
-  background:#151a1d!important;
-  border-top:1px solid #292f33!important;
-  box-shadow:none!important;
-}
-.composer textarea{
-  border-radius:10px!important;
-  border:1px solid #30373b!important;
-  box-shadow:none!important;
-  line-height:1.45!important;
-}
-button,.sidebar-btn,.code-btn,.role-select{
-  border-radius:8px!important;
-  box-shadow:none!important;
-}
-.modal{
-  border-radius:12px!important;
-  border:1px solid #30373b!important;
-  box-shadow:0 18px 50px rgba(0,0,0,.32)!important;
-}
-
-/* Markdown w odpowiedziach Debraina */
-.markdown-body{
-  white-space:normal;
-}
-.markdown-body > :first-child{margin-top:0!important}
-.markdown-body > :last-child{margin-bottom:0!important}
-.markdown-body p{
-  margin:0 0 10px;
-}
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4{
-  color:#f2eee5;
-  line-height:1.25;
-  margin:18px 0 8px;
-  font-weight:750;
-}
-.markdown-body h1{font-size:20px}
-.markdown-body h2{font-size:17px}
-.markdown-body h3{font-size:15px}
-.markdown-body h4{font-size:14px}
-.markdown-body strong{
-  color:#f4d9a1;
-  font-weight:750;
-}
-.markdown-body em{
-  color:#d9d4ca;
-}
-.markdown-body ul,
-.markdown-body ol{
-  margin:7px 0 11px 20px;
-  padding:0;
-}
-.markdown-body li{
-  margin:4px 0;
-  padding-left:2px;
-}
-.markdown-body code{
-  font-family:Consolas,"Cascadia Code",monospace;
-  font-size:.92em;
-  background:#101416;
-  border:1px solid #30373b;
-  border-radius:5px;
-  padding:1px 5px;
-  color:#e6c98f;
-}
-.markdown-body pre{
-  position:relative;
-  background:#0f1315;
-  border:1px solid #30373b;
-  border-radius:9px;
-  padding:12px 14px;
-  margin:10px 0 13px;
-  overflow:auto;
-  white-space:pre;
-}
-.markdown-body pre code{
-  border:0;
-  padding:0;
-  background:transparent;
-  color:#e8e4dc;
-  font-size:12px;
-}
-.markdown-body blockquote{
-  margin:10px 0;
-  padding:8px 12px;
-  border-left:3px solid #b89962;
-  background:#202426;
-  color:#c9c5bc;
-}
-.markdown-body hr{
-  border:0;
-  border-top:1px solid #31383c;
-  margin:16px 0;
-}
-.markdown-body a{
-  color:#a9cbbd;
-  text-decoration:none;
-  border-bottom:1px solid rgba(169,203,189,.35);
-}
-.markdown-body a:hover{
-  border-bottom-color:#a9cbbd;
-}
-.markdown-body .md-table-wrap{
-  overflow-x:auto;
-  margin:10px 0 13px;
-}
-.markdown-body table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:12px;
-}
-.markdown-body th,
-.markdown-body td{
-  border:1px solid #30373b;
-  padding:7px 9px;
-  text-align:left;
-}
-.markdown-body th{
-  background:#20262a;
-  color:#f2eee5;
-}
-.feedback-bar{
-  border-top:1px solid #2c3337!important;
-  margin-top:12px!important;
-  padding-top:9px!important;
-}
-@media(max-width:760px){
-  main{padding:14px 12px 20px!important}
-  .bubble{font-size:13px!important;padding:10px 11px!important}
-}
-
 </style>
 </head>
 <body>
@@ -422,7 +241,7 @@ button,.sidebar-btn,.code-btn,.role-select{
   <div class="mark">◆ DEBRAIN — DOSTĘP</div>
   <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
   <div class="err" id="gateErr"></div>
-  <button onclick="tryUnlock()">Odblokuj</button>
+  <button id="unlockBtn" type="button">Odblokuj</button>
 </div>
 
 <div id="app">
@@ -566,8 +385,7 @@ button,.sidebar-btn,.code-btn,.role-select{
   dailyStateModal?.addEventListener('click',e=>{if(e.target===dailyStateModal)dailyStateModal.classList.remove('open')});
   document.getElementById('dailySave')?.addEventListener('click',async()=>{const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateSave',payload:{state:collectDaily()}})});const d=await r.json();fillDaily(d.state||{});});
   document.getElementById('dailyRefresh')?.addEventListener('click',async()=>{const state=collectDaily();const r=await fetch('/api/debrain-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'dailyStateSave',payload:{state}})});const d=await r.json();fillDaily(d.state||{});});
-  function makeWebBrief(s){const take=(a,n)=>Array.isArray(a)?a.filter(Boolean).slice(0,n):[];const chosen=[...take(s.urgentTasks,3),...take(s.followUps,3),...take(s.clientsWaiting,3),...take(s.priorities,3)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,3);const lines=['PLAN DNIA','','Najważniejsze zadania:'];(chosen.length?chosen:[s.mainGoal||'Ustal najważniejszy cel dnia']).forEach((x,i)=>lines.push(`${i+1}. ${x}`));const contacts=[...take(s.followUps,4),...take(s.clientsWaiting,4)];if(contacts.length){lines.push('','Kontakty i follow-upy:');contacts.slice(0,5).forEach(x=>lines.push('• '+x))}if(take(s.todayDeadlines,4).length){lines.push('','Dzisiejsze terminy:');take(s.todayDeadlines,4).forEach(x=>lines.push('• '+x))}if(take(s.blockers,1).length)lines.push('','Główny bloker: '+s.blockers[0]);if(take(s.importantNotes,2).length){lines.push('','Sedno ważnych notatek:');take(s.importantNotes,2).forEach(x=>lines.push('• '+String(x).slice(0,260)))}lines.push('','Rekomendowana kolejność:','Najpierw zamknij pilne kontakty i działania sprzedażowe. Następnie wykonaj zadanie potrzebne klientom. Dopiero później przejdź do prac organizacyjnych i wizualnych.','','Skup się na jednym konkretnym wyniku naraz.');return lines.join('
-')}
+  function makeWebBrief(s){const take=(a,n)=>Array.isArray(a)?a.filter(Boolean).slice(0,n):[];const chosen=[...take(s.urgentTasks,3),...take(s.followUps,3),...take(s.clientsWaiting,3),...take(s.priorities,3)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,3);const lines=['PLAN DNIA','','Najważniejsze zadania:'];(chosen.length?chosen:[s.mainGoal||'Ustal najważniejszy cel dnia']).forEach((x,i)=>lines.push(`${i+1}. ${x}`));const contacts=[...take(s.followUps,4),...take(s.clientsWaiting,4)];if(contacts.length){lines.push('','Kontakty i follow-upy:');contacts.slice(0,5).forEach(x=>lines.push('• '+x))}if(take(s.todayDeadlines,4).length){lines.push('','Dzisiejsze terminy:');take(s.todayDeadlines,4).forEach(x=>lines.push('• '+x))}if(take(s.blockers,1).length)lines.push('','Główny bloker: '+s.blockers[0]);if(take(s.importantNotes,2).length){lines.push('','Sedno ważnych notatek:');take(s.importantNotes,2).forEach(x=>lines.push('• '+String(x).slice(0,260)))}lines.push('','Rekomendowana kolejność:','Najpierw zamknij pilne kontakty i działania sprzedażowe. Następnie wykonaj zadanie potrzebne klientom. Dopiero później przejdź do prac organizacyjnych i wizualnych.','','Skup się na jednym konkretnym wyniku naraz.');return lines.join('\n')}
   async function loadBrief(){const s=await loadDaily();briefContent.textContent=s.brief||makeWebBrief(s)}
   briefBtn?.addEventListener('click',async()=>{briefModal.classList.add('open');await loadBrief()});
   briefClose?.addEventListener('click',()=>briefModal.classList.remove('open'));
@@ -742,18 +560,43 @@ button,.sidebar-btn,.code-btn,.role-select{
       sessionStorage.setItem('debrain_unlocked','1');
       document.getElementById('gate').style.display='none';
       document.getElementById('app').classList.add('visible');
-      init();
+      Promise.resolve(init()).catch(error=>{
+        console.error('Debrain init error:',error);
+        document.getElementById('gateErr').textContent='PIN poprawny, ale Debrain ma błąd startu: '+error.message;
+      });
     } else {
       document.getElementById('gateErr').textContent = 'Zły PIN';
       document.getElementById('pinInput').value='';
     }
   }
-  document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+  const unlockBtn=document.getElementById('unlockBtn');
+  const pinInput=document.getElementById('pinInput');
 
-  if(sessionStorage.getItem('debrain_unlocked')==='1'){
+  unlockBtn?.addEventListener('click',event=>{
+    event.preventDefault();
+    tryUnlock();
+  });
+  pinInput?.addEventListener('keydown',event=>{
+    if(event.key==='Enter'){
+      event.preventDefault();
+      tryUnlock();
+    }
+  });
+
+  function unlockSavedSession(){
+    if(sessionStorage.getItem('debrain_unlocked')!=='1')return;
     document.getElementById('gate').style.display='none';
     document.getElementById('app').classList.add('visible');
-    window.addEventListener('DOMContentLoaded', init);
+    Promise.resolve(init()).catch(error=>{
+      console.error('Debrain init error:',error);
+      document.getElementById('gateErr').textContent='Błąd uruchamiania Debraina: '+error.message;
+    });
+  }
+
+  if(document.readyState==='loading'){
+    window.addEventListener('DOMContentLoaded',unlockSavedSession,{once:true});
+  }else{
+    unlockSavedSession();
   }
 
   // ---------- Stan ----------
@@ -896,116 +739,6 @@ button,.sidebar-btn,.code-btn,.role-select{
 
   function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-
-  function mdEscape(value){
-    const div=document.createElement('div');
-    div.textContent=String(value||'');
-    return div.innerHTML;
-  }
-
-  function mdInline(value){
-    let text=value;
-    text=text.replace(/`([^`\n]+)`/g,'<code>$1</code>');
-    text=text.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
-    text=text.replace(/__([^_\n]+)__/g,'<strong>$1</strong>');
-    text=text.replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?:;])/g,'$1<em>$2</em>');
-    text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    return text;
-  }
-
-  function markdownToHtml(source){
-    const codeBlocks=[];
-    let safe=mdEscape(source||'').replace(/\r\n?/g,'\n');
-
-    safe=safe.replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g,(_,lang,code)=>{
-      const token=`@@DEBRAIN_CODE_${codeBlocks.length}@@`;
-      codeBlocks.push(`<pre><code${lang?` data-language="${lang}"`:''}>${code.replace(/\n$/,'')}</code></pre>`);
-      return token;
-    });
-
-    const lines=safe.split('\n');
-    const out=[];
-    let paragraph=[];
-    let listType=null;
-    let listItems=[];
-    let quote=[];
-
-    const flushParagraph=()=>{
-      if(!paragraph.length)return;
-      out.push(`<p>${mdInline(paragraph.join(' '))}</p>`);
-      paragraph=[];
-    };
-    const flushList=()=>{
-      if(!listItems.length)return;
-      const tag=listType==='ol'?'ol':'ul';
-      out.push(`<${tag}>${listItems.map(item=>`<li>${mdInline(item)}</li>`).join('')}</${tag}>`);
-      listItems=[];
-      listType=null;
-    };
-    const flushQuote=()=>{
-      if(!quote.length)return;
-      out.push(`<blockquote>${mdInline(quote.join(' '))}</blockquote>`);
-      quote=[];
-    };
-
-    for(const rawLine of lines){
-      const line=rawLine.trimEnd();
-      const trimmed=line.trim();
-
-      if(/^@@DEBRAIN_CODE_\d+@@$/.test(trimmed)){
-        flushParagraph();flushList();flushQuote();
-        out.push(trimmed);
-        continue;
-      }
-      if(!trimmed){
-        flushParagraph();flushList();flushQuote();
-        continue;
-      }
-      const heading=trimmed.match(/^(#{1,4})\s+(.+)$/);
-      if(heading){
-        flushParagraph();flushList();flushQuote();
-        const level=heading[1].length;
-        out.push(`<h${level}>${mdInline(heading[2])}</h${level}>`);
-        continue;
-      }
-      if(/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)){
-        flushParagraph();flushList();flushQuote();
-        out.push('<hr>');
-        continue;
-      }
-      const unordered=trimmed.match(/^[-+*]\s+(.+)$/);
-      const ordered=trimmed.match(/^\d+[.)]\s+(.+)$/);
-      if(unordered||ordered){
-        flushParagraph();flushQuote();
-        const nextType=ordered?'ol':'ul';
-        if(listType&&listType!==nextType)flushList();
-        listType=nextType;
-        listItems.push((unordered||ordered)[1]);
-        continue;
-      }
-      const quoted=trimmed.match(/^&gt;\s?(.*)$/);
-      if(quoted){
-        flushParagraph();flushList();
-        quote.push(quoted[1]);
-        continue;
-      }
-      paragraph.push(trimmed);
-    }
-
-    flushParagraph();flushList();flushQuote();
-
-    let html=out.join('');
-    codeBlocks.forEach((block,index)=>{
-      html=html.replace(`@@DEBRAIN_CODE_${index}@@`,block);
-    });
-    return html;
-  }
-
-  function renderAssistantMarkdown(element,text){
-    element.classList.add('markdown-body');
-    element.innerHTML=markdownToHtml(text||'');
-  }
-
   function addMsg(role, text) {
     if (firstMessage) { log.innerHTML = ''; firstMessage = false; }
     const wrap = document.createElement('div');
@@ -1015,11 +748,7 @@ button,.sidebar-btn,.code-btn,.role-select{
     who.textContent = role === 'user' ? 'ty' : 'debrain';
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    if(role==='assistant'){
-      renderAssistantMarkdown(bubble,text||'');
-    }else{
-      bubble.textContent=text||'';
-    }
+    bubble.textContent = text;
     wrap.appendChild(who);
     wrap.appendChild(bubble);
     log.appendChild(wrap);
@@ -1226,11 +955,7 @@ button,.sidebar-btn,.code-btn,.role-select{
 
       if (!res.body) {
         const data = await res.json();
-        if(data.reply){
-          renderAssistantMarkdown(thinkingBubble,data.reply);
-        }else{
-          thinkingBubble.textContent='Błąd: '+(data.error||'brak odpowiedzi');
-        }
+        thinkingBubble.textContent = data.reply || ('Błąd: ' + (data.error || 'brak odpowiedzi'));
         history = data.history || history;
       } else {
         const reader = res.body.getReader();
@@ -1253,7 +978,7 @@ button,.sidebar-btn,.code-btn,.role-select{
             } else if (event.type === 'final') {
               if (event.error) { thinkingBubble.textContent = 'Błąd: ' + event.error; }
               else {
-                renderAssistantMarkdown(thinkingBubble,event.reply||'Błąd: brak odpowiedzi');
+                thinkingBubble.textContent = event.reply || 'Błąd: brak odpowiedzi';
                 history = event.history || history;
                 if (event.model) { currentModel = event.model; modelTag.textContent = currentModel; }
               }
