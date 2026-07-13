@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanse — decz.pl</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #222; padding: 16px; max-width: 800px; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin-bottom: 4px; }
+.sub { color: #666; font-size: 0.85rem; margin-bottom: 20px; }
+.card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card h2 { font-size: 1.1rem; margin-bottom: 12px; color: #333; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+.row:last-child { border-bottom: none; }
+.label { color: #555; }
+.value { font-weight: 600; }
+.positive { color: #1a7d3a; }
+.negative { color: #c0392b; }
+input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; margin-bottom: 8px; }
+input:focus { outline: none; border-color: #2563eb; }
+.btn { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 0.95rem; cursor: pointer; width: 100%; }
+.btn:hover { background: #1d4ed8; }
+.btn-secondary { background: #e5e7eb; color: #333; }
+.btn-secondary:hover { background: #d1d5db; }
+.btn-small { padding: 6px 12px; font-size: 0.8rem; width: auto; }
+.btn-danger { background: #dc2626; }
+.btn-danger:hover { background: #b91c1c; }
+.flex { display: flex; gap: 8px; }
+.flex input { flex: 1; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.text-center { text-align: center; }
+.progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: #2563eb; border-radius: 4px; transition: width 0.3s; }
+.progress-fill.green { background: #1a7d3a; }
+.progress-fill.yellow { background: #eab308; }
+.progress-fill.red { background: #dc2626; }
+.goal-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+.goal-row:last-child { border-bottom: none; }
+.goal-info { flex: 1; }
+.goal-name { font-weight: 600; font-size: 0.95rem; }
+.goal-progress { font-size: 0.85rem; color: #666; }
+.goal-actions { display: flex; gap: 4px; }
+.empty-state { color: #999; font-size: 0.9rem; text-align: center; padding: 20px 0; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.9rem; background: #e5e7eb; color: #555; }
+.tab.active { background: #2563eb; color: #fff; }
+.hidden { display: none; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.summary-item { background: #fff; border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.summary-item .amount { font-size: 1.3rem; font-weight: 700; }
+.summary-item .desc { font-size: 0.75rem; color: #888; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Finanse</h1>
+<div class="sub">Osobisty panel finansowy &middot; decz.pl</div>
+
+<!-- Podsumowanie miesiąca -->
+<div class="summary-grid" id="summaryGrid">
+  <div class="summary-item">
+    <div class="amount positive" id="sumIncome">0</div>
+    <div class="desc">Przychody</div>
+  </div>
+  <div class="summary-item">
+    <div class="amount negative" id="sumExpenses">0</div>
+    <div class="desc">Wydatki</div>
+  </div>
+  <div class="summary-item">
+    <div class="amount" id="sumBalance">0</div>
+    <div class="desc">Saldo</div>
+  </div>
+</div>
+
+<!-- Zakładki -->
+<div class="tabs">
+  <div class="tab active" data-tab="transactions">Transakcje</div>
+  <div class="tab" data-tab="budget">Budżet</div>
+  <div class="tab" data-tab="goals">Cele</div>
+  <div class="tab" data-tab="accounts">Konta</div>
+</div>
+
+<!-- === TRANSAKCJE === -->
+<div id="tab-transactions" class="tab-content">
+  <div class="card">
+    <h2>Dodaj transakcję</h2>
+    <div class="flex">
+      <input type="number" id="txAmount" placeholder="Kwota" step="0.01">
+      <select id="txType">
+        <option value="income">Przychód</option>
+        <option value="expense">Wydatek</option>
+      </select>
+    </div>
+    <input type="text" id="txCategory" placeholder="Kategoria (np. jedzenie, paliwo, praca)">
+    <input type="text" id="txDesc" placeholder="Opis (opcjonalnie)">
+    <button class="btn" onclick="addTransaction()">Dodaj</button>
+  </div>
+
+  <div class="card">
+    <h2>Historia</h2>
+    <div id="transactionList"></div>
+  </div>
+</div>
+
+<!-- === BUDŻET === -->
+<div id="tab-budget" class="tab-content hidden">
+  <div class="card">
+    <h2>Budżet miesięczny</h2>
+    <div class="row">
+      <span class="label">Limit miesięczny</span>
+      <input type="number" id="budgetLimit" step="0.01" style="width:140px;margin:0" onchange="saveBudgetLimit()">
+    </div>
+    <div class="row">
+      <span class="label">Wydano w tym miesiącu</span>
+      <span class="value negative" id="budgetSpent">0</span>
+    </div>
+    <div class="row">
+      <span class="label">Pozostało</span>
+      <span class="value" id="budgetLeft">0</span>
+    </div>
+    <div class="progress-bar mt-8">
+      <div class="progress-fill" id="budgetBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Wydatki według kategorii</h2>
+    <div id="categoryBreakdown"></div>
+  </div>
+</div>
+
+<!-- === CELE === -->
+<div id="tab-goals" class="tab-content hidden">
+  <div class="card">
+    <h2>Dodaj cel</h2>
+    <div class="flex">
+      <input type="text" id="goalName" placeholder="Nazwa celu">
+      <input type="number" id="goalTarget" placeholder="Kwota docelowa" step="0.01">
+    </div>
+    <input type="number" id="goalSaved" placeholder="Już odłożone (opcjonalnie)" step="0.01">
+    <button class="btn" onclick="addGoal()">Dodaj cel</button>
+  </div>
+
+  <div class="card">
+    <h2>Twoje cele</h2>
+    <div id="goalList"></div>
+  </div>
+</div>
+
+<!-- === KONTA === -->
+<div id="tab-accounts" class="tab-content hidden">
+  <div class="card">
+    <h2>Stan konta</h2>
+    <div class="flex">
+      <input type="text" id="accName" placeholder="Nazwa (np. mBank, gotówka)" value="Główne konto">
+      <input type="number" id="accBalance" placeholder="Saldo" step="0.01">
+    </div>
+    <button class="btn" onclick="addAccountSnapshot()">Zapisz stan</button>
+  </div>
+
+  <div class="card">
+    <h2>Historia stanów konta</h2>
+    <div id="accountHistory"></div>
+  </div>
+</div>
+
+<script>
+// === DANE ===
+const STORAGE_KEY = 'decz_finanse';
+let data;
+
+function loadData() {
+  try {
+    data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  } catch(e) {}
+  if (!data) {
+    data = {
+      transactions: [],
+      budgetLimit: 0,
+      goals: [],
+      accountSnapshots: []
+    };
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// === TRANSAKCJE ===
+function addTransaction() {
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const type = document.getElementById('txType').value;
+  const category = document.getElementById('txCategory').value.trim() || 'inne';
+  const desc = document.getElementById('txDesc').value.trim();
+
+  if (!amount || amount <= 0) { alert('Podaj kwotę.'); return; }
+
+  data.transactions.push({
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 10),
+    amount: type === 'expense' ? -amount : amount,
+    category,
+    desc
+  });
+
+  saveData();
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txCategory').value = '';
+  document.getElementById('txDesc').value = '';
+  renderAll();
+}
+
+function deleteTransaction(id) {
+  data.transactions = data.transactions.filter(t => t.id !== id);
+  saveData();
+  renderAll();
+}
+
+// === BUDŻET ===
+function saveBudgetLimit() {
+  data.budgetLimit = parseFloat(document.getElementById('budgetLimit').value) || 0;
+  saveData();
+  renderAll();
+}
+
+// === CELE ===
+function addGoal() {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const saved = parseFloat(document.getElementById('goalSaved').value) || 0;
+
+  if (!name || !target || target <= 0) { alert('Podaj nazwę i kwotę docelową.'); return; }
+
+  data.goals.push({
+    id: Date.now(),
+    name,
+    target,
+    saved
+  });
+
+  saveData();
+  document.getElementById('goalName').value = '';
+  document.getElementById('goalTarget').value = '';
+  document.getElementById('goalSaved').value = '';
+  renderAll();
+}
+
+function updateGoalSaved(id, amount) {
+  const goal = data.goals.find(g => g.id === id);
+  if (goal) {
+    goal.saved = Math.max(0, (goal.saved || 0) + amount);
+    saveData();
+    renderAll();
+  }
+}
+
+function deleteGoal(id) {
+  data.goals = data.goals.filter(g => g.id !== id);
+  saveData();
+  renderAll();
+}
+
+// === KONTA ===
+function addAccountSnapshot() {
+  const name = document.getElementById('accName').value.trim() || 'Główne konto';
+  const balance = parseFloat(document.getElementById('accBalance').value);
+
+  if (isNaN(balance)) { alert('Podaj saldo.'); return; }
+
+  data.accountSnapshots.push({
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 10),
+    name,
+    balance
+  });
+
+  saveData();
+  document.getElementById('accBalance').value = '';
+  renderAll();
+}
+
+function deleteSnapshot(id) {
+  data.accountSnapshots = data.accountSnapshots.filter(s => s.id !== id);
+  saveData();
+  renderAll();
+}
+
+// === RENDER ===
+function renderAll() {
+  renderSummary();
+  renderTransactions();
+  renderBudget();
+  renderGoals();
+  renderAccounts();
+}
+
+function renderSummary() {
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  const monthTx = data.transactions.filter(t => t.date.startsWith(monthKey));
+  const income = monthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const expenses = monthTx.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const balance = income - expenses;
+
+  document.getElementById('sumIncome').textContent = income.toFixed(2) + ' zł';
+  document.getElementById('sumExpenses').textContent = expenses.toFixed(2) + ' zł';
+  const balEl = document.getElementById('sumBalance');
+  balEl.textContent = balance.toFixed(2) + ' zł';
+  balEl.className = 'amount ' + (balance >= 0 ? 'positive' : 'negative');
+}
+
+function renderTransactions() {
+  const list = document.getElementById('transactionList');
+  if (data.transactions.length === 0) {
+    list.innerHTML = '<div class="empty-state">Brak transakcji. Dodaj pierwszą.</div>';
+    return;
+  }
+
+  const sorted = [...data.transactions].reverse();
+  list.innerHTML = sorted.map(t => {
+    const isExpense = t.amount < 0;
+    return `<div class="row">
+      <div>
+        <div style="font-weight:600;font-size:0.9rem">${t.category}${t.desc ? ' — ' + t.desc : ''}</div>
+        <div style="font-size:0.75rem;color:#999">${t.date}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="value ${isExpense ? 'negative' : 'positive'}">${isExpense ? '-' : '+'}${Math.abs(t.amount).toFixed(2)} zł</span>
+        <button class="btn-small btn-danger" onclick="deleteTransaction(${t.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBudget() {
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  document.getElementById('budgetLimit').value = data.budgetLimit || '';
+
+  const expenses = data.transactions
+    .filter(t => t.date.startsWith(monthKey) && t.amount < 0)
+    .reduce((s, t) => s + Math.abs(t.amount), 0);
+
+  document.getElementById('budgetSpent').textContent = expenses.toFixed(2) + ' zł';
+
+  const left = (data.budgetLimit || 0) - expenses;
+  const leftEl = document.getElementById('budgetLeft');
+  leftEl.textContent = left.toFixed(2) + ' zł';
+  leftEl.className = 'value ' + (left >= 0 ? 'positive' : 'negative');
+
+  const pct = data.budgetLimit > 0 ? Math.min(100, (expenses / data.budgetLimit) * 100) : 0;
+  const bar = document.getElementById('budgetBar');
+  bar.style.width = pct + '%';
+  bar.className = 'progress-fill ' + (pct > 90 ? 'red' : pct > 70 ? 'yellow' : 'green');
+
+  // Kategorie
+  const cats = {};
+  data.transactions
+    .filter(t => t.date.startsWith(monthKey) && t.amount < 0)
+    .forEach(t => {
+      cats[t.category] = (cats[t.category] || 0) + Math.abs(t.amount);
+    });
+
+  const catDiv = document.getElementById('categoryBreakdown');
+  const catKeys = Object.keys(cats).sort((a,b) => cats[b] - cats[a]);
+  if (catKeys.length === 0) {
+    catDiv.innerHTML = '<div class="empty-state">Brak wydatków w tym miesiącu.</div>';
+  } else {
+    catDiv.innerHTML = catKeys.map(c => `
+      <div class="row">
+        <span class="label">${c}</span>
+        <span class="value negative">${cats[c].toFixed(2)} zł</span>
+      </div>
+    `).join('');
+  }
+}
+
+function renderGoals() {
+  const list = document.getElementById('goalList');
+  if (data.goals.length === 0) {
+    list.innerHTML = '<div class="empty-state">Brak celów. Dodaj pierwszy.</div>';
+    return;
+  }
+
+  list.innerHTML = data.goals.map(g => {
+    const pct = g.target > 0 ? Math.min(100, ((g.saved || 0) / g.target) * 100) : 0;
+    return `<div class="goal-row">
+      <div class="goal-info">
+        <div class="goal-name">${g.name}</div>
+        <div class="goal-progress">${(g.saved || 0).toFixed(2)} zł / ${g.target.toFixed(2)} zł (${Math.round(pct)}%)</div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:${pct}%"></div></div>
+      </div>
+      <div class="goal-actions">
+        <button class="btn-small btn-secondary" onclick="updateGoalSaved(${g.id}, 50)">+50</button>
+        <button class="btn-small btn-secondary" onclick="updateGoalSaved(${g.id}, 100)">+100</button>
+        <button class="btn-small btn-danger" onclick="deleteGoal(${g.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAccounts() {
+  const list = document.getElementById('accountHistory');
+  if (data.accountSnapshots.length === 0) {
+    list.innerHTML = '<div class="empty-state">Brak zapisanych stanów konta.</div>';
+    return;
+  }
+
+  const sorted = [...data.accountSnapshots].reverse();
+  list.innerHTML = sorted.map(s => `
+    <div class="row">
+      <div>
+        <div style="font-weight:600;font-size:0.9rem">${s.name}</div>
+        <div style="font-size:0.75rem;color:#999">${s.date}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="value">${s.balance.toFixed(2)} zł</span>
+        <button class="btn-small btn-danger" onclick="deleteSnapshot(${s.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// === ZAKŁADKI ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-' + this.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// === START ===
+loadData();
+renderAll();
+</script>
+</body>
+</html>
