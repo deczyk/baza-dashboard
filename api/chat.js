@@ -12,33 +12,6 @@ const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const DEFAULT_MODEL = "deepseek-chat";
 const ALLOWED_MODELS = ["deepseek-chat", "deepseek-reasoner"];
 
-
-const ROLE_DEFINITIONS = {
-  auto:{label:"Automatyczny",style:"Automatycznie dobierz rolę do zadania.",format:"Najpierw wynik, potem konkretne kroki."},
-  day_assistant:{label:"Asystent dnia",style:"Porządkuj dzień, terminy, priorytety i blokery.",format:"Cel dnia → 2–3 priorytety → kolejność działania."},
-  sales:{label:"Doradca sprzedażowy",style:"Analizuj klienta, historię kontaktu, obiekcje i następny krok.",format:"Ocena leada → następny krok → gotowa wiadomość."},
-  crm:{label:"CRM i follow-upy",style:"Pracuj na historii klienta i follow-upach.",format:"Kto czeka → co zrobić dziś → gotowe follow-upy."},
-  programmer:{label:"Programista",style:"Najpierw analiza, potem zmiana i test.",format:"Diagnoza → plan → zmiana → test."},
-  code_auditor:{label:"Audytor kodu",style:"Szukaj błędów, regresji i ryzyk.",format:"Ryzyka → dowody → poprawki."},
-  business:{label:"Doradca biznesowy",style:"Rekomenduj jedną najlepszą opcję.",format:"Rekomendacja → uzasadnienie → następny krok."},
-  finance:{label:"Analityk finansowy",style:"Licz konkretnie i pokazuj założenia.",format:"Wniosek → liczby → założenia → ryzyka."},
-  documents:{label:"Asystent dokumentów",style:"Pracuj precyzyjnie i zachowuj strukturę.",format:"Gotowy dokument → braki."},
-  marketing:{label:"Marketing",style:"Twórz konkretne treści sprzedażowe.",format:"Cel → treść → CTA."},
-  strategist:{label:"Strateg",style:"Myśl długofalowo, ale kończ decyzją.",format:"Kierunek → priorytety → plan."}
-};
-function detectRole(text){
-  const t=String(text||"").toLowerCase();
-  if(/kod|python|html|javascript|css|błąd|bug|repo|git/.test(t))return"programmer";
-  if(/crm|follow.?up|klient|lead|advisor/.test(t))return"crm";
-  if(/sprzedaż|oferta|obiekcj|domkn/.test(t))return"sales";
-  if(/finans|marża|koszt|budżet|leasing|kredyt/.test(t))return"finance";
-  if(/umowa|dokument|pdf|formularz|pismo/.test(t))return"documents";
-  if(/marketing|reklama|facebook|olx|kampania/.test(t))return"marketing";
-  if(/dzisiaj|plan dnia|priorytet|brief|termin/.test(t))return"day_assistant";
-  if(/strateg/.test(t))return"strategist";
-  return"business";
-}
-
 const SYSTEM_PROMPT = `Jesteś Debrain — osobisty agent Kuby, dostępny przez panel webowy na decz.pl.
 
 CHARAKTER: Zwracasz się do Kuby tak, jak Alfred Pennyworth zwracał się do Bruce'a Wayne'a — z nienaganną
@@ -91,7 +64,22 @@ DORADZTWO MODELU: masz dwa tryby — deepseek-chat (szybki, domyślny) i deepsee
 droższy, ale znacznie mocniejszy w wieloetapowym rozumowaniu i trudnym debugowaniu). Kiedy oceniasz, że
 zadanie jest złożone, wieloetapowe, wymaga głębokiego rozumowania albo precyzyjnego planowania — powiedz o
 tym Kubie wprost i zasugeruj przełączenie się na deepseek-reasoner (wpisuje /reasoner). Nie proponuj tego
-przy prostych, szybkich pytaniach — tylko kiedy realnie by pomogło.`;
+przy prostych, szybkich pytaniach — tylko kiedy realnie by pomogło.
+
+PRZEKAZYWANIE DO BAZY: kiedy Kuba napisze coś istotnego w rozmowie (obojętnie czy w wersji web czy
+desktopowej), oceń czy to nadaje się do zapisania w Bazie (baza.html) przez update_baza_data, i jeśli tak —
+zrób to od razu, bez pytania o zgodę:
+- Wyraźna intencja zrobienia czegoś ("muszę X", "trzeba Y", "przypomnij mi żeby Z", "zadzwonić do...",
+  "wysłać...", "sprawdzić...", "dokończyć...") → add_todo. Jeśli Kuba podał kontekst kiedy to zrobi
+  ("w poniedziałek", "jutro rano") — dodaj to jako note przy zadaniu (parametr note).
+- Coś do kupienia → add_shopping_item.
+- Film/materiał do obejrzenia → add_watch_item.
+- Luźna myśl albo informacja warta zapisania, ale bez konkretnej akcji do wykonania → add_note.
+- Coś co brzmi jak "to jest najważniejsze dzisiaj" → set_priority.
+Nie rób tego dla każdej wzmianki — tylko gdy sprawa jest konkretna i realnie warta odnotowania, nie dla
+luźnej rozmowy czy pytań informacyjnych. Jeśli nie masz pewności czy coś się kwalifikuje, nie dodawaj —
+lepiej pominąć niż zaśmiecić Bazę. Krótko potwierdź na końcu odpowiedzi co zapisałeś, np. "(dodano do zadań
+w Bazie)".`;
 
 const TOOLS_SCHEMA = [
   {
@@ -258,33 +246,6 @@ const TOOLS_SCHEMA = [
   {
     type: "function", function: { name: "suggest_user_observation", description: "Zapisuje niepewną sugestię dotyczącą preferencji lub osobowości użytkownika do późniejszego zatwierdzenia. Używaj tylko przy wyraźnym lub powtarzalnym wzorcu.", parameters: { type: "object", properties: { text: {type:"string"}, category:{type:"string"}, evidence:{type:"string"}, confidence:{type:"number"} }, required:["text"] } }
   },
-  {
-    type: "function",
-    function: {
-      name: "remember_knowledge_entry",
-      description: "Zapisuje ważne, potwierdzone ustalenie do wspólnej pamięci desktop/decz.pl. Używaj dla jasnych decyzji, faktów, statusów, zasad, preferencji, celów i ryzyk.",
-      parameters: {
-        type: "object",
-        properties: {
-          category: { type:"string", enum:["DECYZJA","FAKT","STATUS","ZASADA","PREFERENCJA","CEL","RYZYKO","DO POTWIERDZENIA"] },
-          text: { type:"string" },
-          source: { type:"string" },
-          confidence: { type:"number" },
-          active: { type:"boolean" }
-        },
-        required:["category","text"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "list_knowledge_entries",
-      description: "Czyta wspólną pamięć decyzji, faktów, statusów, zasad, preferencji, celów i ryzyk.",
-      parameters: { type:"object", properties:{ category:{type:"string"}, active_only:{type:"boolean"} } }
-    }
-  },
-
 ];
 
 // ---------- web_search ----------
@@ -605,8 +566,6 @@ const TOOL_IMPL = {
   write_memory: (args) => toolWriteMemory(args.filename, args.content),
   delete_memory: (args) => toolDeleteMemory(args.filename),
   suggest_user_observation: (args) => memoryStoreAction("profileAddSuggestion", args).then(r => JSON.stringify(r)),
-  remember_knowledge_entry: (args) => memoryStoreAction("knowledgeUpsert", {entry:args}).then(r => JSON.stringify(r)),
-  list_knowledge_entries: (args) => memoryStoreAction("knowledgeList", {category:args.category||"",activeOnly:args.active_only!==false}).then(r => JSON.stringify(r.entries||[])),
 };
 
 function normalizeMessages(messages) {
@@ -661,18 +620,9 @@ module.exports = async (req, res) => {
     const { history, model: requestedModel, chatId, hidden } = req.body;
     const model = ALLOWED_MODELS.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
     let profile = null;
-    let knowledgeEntries = [];
-    let crmClients = [];
     try { profile = (await memoryStoreAction("profileGet", {})).profile; } catch (_) {}
-    try { knowledgeEntries = (await memoryStoreAction("knowledgeList", {activeOnly:true})).entries || []; } catch (_) {}
-    try { crmClients = (await memoryStoreAction("crmList", {})).clients || []; } catch (_) {}
     const profileContext = profile ? `\n\nPROFIL UŻYTKOWNIKA (zatwierdzone dane):\n${JSON.stringify({basic:profile.basic,communication:profile.communication,workStyle:profile.workStyle,likes:profile.likes,dislikes:profile.dislikes,motivators:profile.motivators,approvedObservations:profile.approvedObservations}, null, 2)}\nUCZENIE: nie uznawaj pojedynczej wypowiedzi za stałą cechę. Przy wyraźnym lub powtarzalnym wzorcu użyj suggest_user_observation.` : "";
-    const knowledgeContext = `\n\nPAMIĘĆ DECYZJI, FAKTÓW I USTALEŃ (obowiązujące wpisy):\n${JSON.stringify(knowledgeEntries.slice(0,80).map(x=>({category:x.category,text:x.text,confidence:x.confidence,source:x.source})), null, 2)}\nZASADA: nowe wpisy zapisuj przez remember_knowledge_entry tylko przy jasnym ustaleniu. Niepewne informacje oznaczaj jako DO POTWIERDZENIA.`;
-    const activeRole = role === "auto" ? detectRole(message) : role;
-    const rd = ROLE_DEFINITIONS[activeRole] || ROLE_DEFINITIONS.business;
-    const roleContext = `\n\nAKTYWNA ROLA: ${rd.label}\nSTYL ROLI: ${rd.style}\nWYMAGANY FORMAT: ${rd.format}`;
-    const crmContext = `\n\nCRM I HISTORIA KLIENTÓW:\n${JSON.stringify(crmClients.slice(0,50).map(x=>({name:x.name,status:x.status,stage:x.stage,product:x.product,value:x.opportunityValue,lastContact:x.lastContact,nextFollowUp:x.nextFollowUp,objections:x.objections})),null,2)}`;
-    let messages = [{ role: "system", content: SYSTEM_PROMPT + roleContext + profileContext + knowledgeContext + crmContext }, ...(history || [])];
+    let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext }, ...(history || [])];
     let finalContent = null;
 
     for (let i = 0; i < 10 && finalContent === null; i++) {
