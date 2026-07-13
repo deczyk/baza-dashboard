@@ -6,60 +6,161 @@
 //   DEBRAIN_JSONBIN_BIN_ID — bin w jsonbin.io
 //   JSONBIN_API_KEY        — Twój X-Master-Key z jsonbin.io
 
-const BIN_ID = process.env.DEBRAIN_JSONBIN_BIN_ID;
-const KEY = process.env.JSONBIN_API_KEY;
-const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const SUPABASE_SECRET_KEY =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "";
+
+const STORE_ID = process.env.DEBRAIN_STORE_ID || "main";
+const TABLE_URL = `${SUPABASE_URL}/rest/v1/debrain_store`;
+
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_SECRET_KEY,
+    Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
+    "Content-Type": "application/json",
+    ...extra,
+  };
+}
 
 function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-async function loadStore() {
-  const r = await fetch(`${BASE}/latest`, { headers: { "X-Master-Key": KEY } });
-  const data = await r.json();
-  const store = (data && data.record) || {};
+function normalizeStore(store) {
+  store = store && typeof store === "object" ? store : {};
   store.folders = store.folders || {};
   store.chats = store.chats || {};
   store.activeChatId = store.activeChatId || null;
   store.lastGreetingDate = store.lastGreetingDate || null;
-  store.vault = store.vault || {};   // { "nazwa-pliku.md": "treść" }
-  store.memory = store.memory || {}; // { "nazwa-pliku.md": "treść" } — destylowane lekcje
-  store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
+  store.vault = store.vault || {};
+  store.memory = store.memory || {};
+  store.profile = store.profile || {
+    version: 1,
+    updatedAt: null,
+    basic: {
+      name: "Jakub",
+      language: "polski",
+      company: "Sklep za Stodołą",
+      role: "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników",
+    },
+    communication: {
+      style: "konkretnie, bez lania wody",
+      answerOrder: "najpierw rekomendacja, potem uzasadnienie i następny krok",
+      detailLevel: "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach",
+      tone: "spokojny, bez przesadnego entuzjazmu",
+      codeDelivery: "gotowe pliki ZIP i dokładna instrukcja wdrożenia",
+    },
+    workStyle: {
+      decisionStyle: "jedna rekomendowana opcja zamiast wielu równorzędnych",
+      pace: "szybkie wdrażanie i testowanie etapami",
+      organization: "panel jako centrum pracy",
+      priorities: ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"],
+    },
+    likes: ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"],
+    dislikes: ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"],
+    motivators: ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"],
+    habitsAndPatterns: [],
+    approvedObservations: [],
+    suggestions: [],
+  };
 
   if (!Array.isArray(store.learningFeedback)) store.learningFeedback = [];
-  if (!store.dailyState || typeof store.dailyState !== 'object') store.dailyState = {};
+  if (!store.dailyState || typeof store.dailyState !== "object") store.dailyState = {};
   if (!Array.isArray(store.crmClients)) store.crmClients = [];
   if (!Array.isArray(store.stalledMatters)) store.stalledMatters = [];
-  if (!store.behaviorModel || typeof store.behaviorModel !== 'object') store.behaviorModel = {observations:[],version:1};
-  if (!store.settings || typeof store.settings !== 'object') store.settings = {};
+  if (!store.behaviorModel || typeof store.behaviorModel !== "object") {
+    store.behaviorModel = { observations: [], version: 1 };
+  }
+  if (!store.settings || typeof store.settings !== "object") store.settings = {};
   if (!Array.isArray(store.syncQueue)) store.syncQueue = [];
   if (!Array.isArray(store.changeHistory)) store.changeHistory = [];
+
   if (!Array.isArray(store.knowledgeEntries)) {
     const now = new Date().toISOString();
     store.knowledgeEntries = [
       { id:"knowledge_premium_price", category:"DECYZJA", text:"Domyślna oferta Premium kosztuje 14 500 EUR netto.", source:"ustalenia biznesowe", confidence:1, active:true, createdAt:now, updatedAt:now },
       { id:"knowledge_offer_order", category:"ZASADA", text:"Najtańszego wariantu nie proponować na początku rozmowy; używać go dopiero przy obiekcji budżetowej.", source:"ustalenia sprzedażowe", confidence:1, active:true, createdAt:now, updatedAt:now },
       { id:"knowledge_sales_start", category:"STATUS", text:"Sprzedaż mlekomatów ma ruszyć po przygotowaniu wersji pod polski system i walutę.", source:"ustalenia projektu", confidence:0.9, active:true, createdAt:now, updatedAt:now },
-      { id:"knowledge_zip_preference", category:"PREFERENCJA", text:"Przy zmianach technicznych użytkownik preferuje gotową paczkę ZIP i dokładną instrukcję wdrożenia.", source:"potwierdzone zachowanie użytkownika", confidence:1, active:true, createdAt:now, updatedAt:now }
+      { id:"knowledge_zip_preference", category:"PREFERENCJA", text:"Przy zmianach technicznych użytkownik preferuje gotową paczkę ZIP i dokładną instrukcję wdrożenia.", source:"potwierdzone zachowanie użytkownika", confidence:1, active:true, createdAt:now, updatedAt:now },
     ];
   }
   return store;
 }
 
-async function saveStore(store) {
-  await fetch(BASE, {
-    method: "PUT",
-    headers: { "X-Master-Key": KEY, "Content-Type": "application/json" },
-    body: JSON.stringify(store),
-  });
+async function loadStore() {
+  const response = await fetch(
+    `${TABLE_URL}?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
+    { headers: supabaseHeaders() }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Supabase odczyt HTTP ${response.status}: ${await response.text()}`);
+  }
+
+  const rows = await response.json();
+  if (!rows.length) {
+    const empty = normalizeStore({});
+    const createResponse = await fetch(TABLE_URL, {
+      method: "POST",
+      headers: supabaseHeaders({ Prefer: "return=representation" }),
+      body: JSON.stringify({ id: STORE_ID, data: empty, version: 1 }),
+    });
+    if (!createResponse.ok) {
+      throw new Error(`Supabase inicjalizacja HTTP ${createResponse.status}: ${await createResponse.text()}`);
+    }
+    empty.__storageVersion = 1;
+    return empty;
+  }
+
+  const store = normalizeStore(rows[0].data || {});
+  store.__storageVersion = Number(rows[0].version || 1);
+  return store;
 }
 
+async function saveStore(store) {
+  const expectedVersion = Number(store.__storageVersion || 1);
+  const cleanStore = { ...store };
+  delete cleanStore.__storageVersion;
+
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/rpc/save_debrain_store`,
+    {
+      method: "POST",
+      headers: supabaseHeaders(),
+      body: JSON.stringify({
+        p_id: STORE_ID,
+        p_expected_version: expectedVersion,
+        p_data: cleanStore,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Supabase zapis HTTP ${response.status}: ${await response.text()}`);
+  }
+
+  const result = await response.json();
+  const row = Array.isArray(result) ? result[0] : result;
+  if (!row || row.ok !== true) {
+    const error = new Error("Konflikt synchronizacji: dane zostały zmienione na innym urządzeniu. Odśwież i spróbuj ponownie.");
+    error.code = "SYNC_CONFLICT";
+    throw error;
+  }
+  store.__storageVersion = Number(row.new_version);
+}
+
+
 module.exports = async (req, res) => {
-  if (!BIN_ID || !KEY) {
-    res.status(200).json({ error: "Pamięć nieskonfigurowana (brak DEBRAIN_JSONBIN_BIN_ID / JSONBIN_API_KEY)." });
+  if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
+    res.status(500).json({
+      error: "Pamięć online nieskonfigurowana. Brak SUPABASE_URL lub SUPABASE_SECRET_KEY w Vercel."
+    });
     return;
   }
 
+  try {
   if (req.method === "GET") {
     const store = await loadStore();
     const folders = Object.entries(store.folders).map(([id, f]) => ({ id, name: f.name }));
@@ -379,4 +480,12 @@ module.exports = async (req, res) => {
     default:
       res.status(400).json({ error: `Nieznana akcja: ${action || "(brak)"}` });
   }
+  } catch (error) {
+    const status = error && error.code === "SYNC_CONFLICT" ? 409 : 500;
+    res.status(status).json({
+      error: error?.message || "Nieznany błąd pamięci online.",
+      code: error?.code || "SUPABASE_ERROR",
+    });
+  }
+
 };
