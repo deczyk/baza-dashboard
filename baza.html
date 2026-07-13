@@ -548,6 +548,9 @@ let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text
   { id:14, title:"Why didnt u cry?", done:false },
   { id:15, title:'Birds do not sign in caves', done:false },
 ] };
+const DEFAULT_LINKS = [
+  { name:'Capitol Trades', url:'https://www.capitoltrades.com', icon:'📈' },
+];
 let saveTimer = null;
 let priorityTimer = null;
 
@@ -1246,6 +1249,7 @@ async function loadData(){
     if(!DATA.pushSubscriptions) DATA.pushSubscriptions = [];
     if(!DATA.todos) DATA.todos = [];
     if(!DATA.shoppingList) DATA.shoppingList = [];
+    if(!DATA.links) DATA.links = [];
     if(!DATA.water) DATA.water = { date:"", ml:0 };
     if(!DATA.calories) DATA.calories = { date:"", kcal:0, goal:2500 };
     if(!DATA.habitHistory) DATA.habitHistory = {};
@@ -1271,10 +1275,31 @@ async function loadData(){
   }catch(e){
     setSyncStatus(false, 'brak danych — lokalnie');
   }
+  const addedDefaultLinks = ensureDefaultLinks();
   renderAll();
+  if(addedDefaultLinks) queueSave();
 }
 
 let pendingSave = false;
+
+function ensureDefaultLinks(){
+  if(!Array.isArray(DATA.links)) DATA.links = [];
+  let changed = false;
+  DEFAULT_LINKS.forEach(link=>{
+    const exists = DATA.links.some(item=>{
+      try{
+        return new URL(item.url).hostname.replace(/^www\./,'') === new URL(link.url).hostname.replace(/^www\./,'');
+      }catch(e){
+        return item.url === link.url;
+      }
+    });
+    if(!exists){
+      DATA.links.push(link);
+      changed = true;
+    }
+  });
+  return changed;
+}
 
 function queueSave(){
   setSyncStatus(true, 'zapisywanie…');
