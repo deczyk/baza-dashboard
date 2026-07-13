@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const store = require('./_supabase-store');
 
 const HABITS = [
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
@@ -46,16 +47,10 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const BIN_ID = process.env.JSONBIN_BIN_ID;
-  const API_KEY = process.env.JSONBIN_API_KEY;
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
-    const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    const json = await r.json();
-    const data = json.record || {};
+    const { record: data } = await store.getLatest();
     const history = data.habitHistory || {};
 
     // Ostatnie 7 dni (łącznie z dziś)

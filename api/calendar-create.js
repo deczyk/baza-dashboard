@@ -1,11 +1,11 @@
+const store = require("./_supabase-store");
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
-  const BIN_ID = process.env.JSONBIN_BIN_ID;
-  const API_KEY = process.env.JSONBIN_API_KEY;
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -16,11 +16,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    const getJson = await getRes.json();
-    const data = getJson.record || {};
+    const { record: data } = await store.getLatest();
 
     if (!data.googleRefreshToken) {
       res.status(400).json({ error: 'Kalendarz nie jest połączony' });

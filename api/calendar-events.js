@@ -1,15 +1,11 @@
+const store = require("./_supabase-store");
+
 module.exports = async function handler(req, res) {
-  const BIN_ID = process.env.JSONBIN_BIN_ID;
-  const API_KEY = process.env.JSONBIN_API_KEY;
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   try {
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    const getJson = await getRes.json();
-    const data = getJson.record || {};
+    const { record: data } = await store.getLatest();
 
     if (!data.googleRefreshToken) {
       res.status(200).json({ connected: false, events: [] });

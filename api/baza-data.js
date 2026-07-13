@@ -1,3 +1,5 @@
+const store = require("./_supabase-store");
+
 module.exports = async function handler(req, res) {
   const providedPassword = req.headers['x-panel-password'];
   if (providedPassword !== process.env.PANEL_PASSWORD) {
@@ -5,37 +7,21 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const BIN_ID = process.env.JSONBIN_BIN_ID;
-  const API_KEY = process.env.JSONBIN_API_KEY;
-
-  if (!BIN_ID || !API_KEY) {
-    res.status(500).json({ error: 'Brak skonfigurowanych zmiennych środowiskowych na Vercel' });
+  if (!store.configured()) {
+    res.status(500).json({ error: 'Brak skonfigurowanych zmiennych środowiskowych na Vercel (SUPABASE_URL / SUPABASE_SECRET_KEY)' });
     return;
   }
 
-  const base = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-
   try {
     if (req.method === 'GET') {
-      const r = await fetch(`${base}/latest`, {
-        headers: { 'X-Master-Key': API_KEY }
-      });
-      const data = await r.json();
-      res.status(r.status).json(data);
+      const data = await store.getLatest();
+      res.status(200).json(data);
       return;
     }
 
     if (req.method === 'PUT') {
-      const r = await fetch(base, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': API_KEY
-        },
-        body: JSON.stringify(req.body)
-      });
-      const data = await r.json();
-      res.status(r.status).json(data);
+      const data = await store.putRecord(req.body);
+      res.status(200).json(data);
       return;
     }
 

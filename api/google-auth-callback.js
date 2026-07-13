@@ -1,3 +1,5 @@
+const store = require("./_supabase-store");
+
 module.exports = async function handler(req, res) {
   const code = req.query.code;
   if (!code) {
@@ -29,20 +31,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Zapisz refresh_token w tym samym miejscu co reszta danych Bazy
-    const BIN_ID = process.env.JSONBIN_BIN_ID;
-    const API_KEY = process.env.JSONBIN_API_KEY;
-
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    const getJson = await getRes.json();
-    const data = getJson.record || {};
-    data.googleRefreshToken = tokens.refresh_token;
-
-    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-      body: JSON.stringify(data)
+    await store.mutateRecord((data) => {
+      data.googleRefreshToken = tokens.refresh_token;
     });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

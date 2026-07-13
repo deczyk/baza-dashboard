@@ -1,72 +1,92 @@
-// api/debrain-memory.js — wspólna pamięć Debraina (Vercel Serverless Function)
-// Ten sam magazyn (jsonbin) czytają i zapisują: wersja webowa (decz.pl) ORAZ
-// desktopowa appka lokalna (gui_app.py), jeśli ma włączoną synchronizację (DEBRAIN_SYNC=1).
+// api/debrain-memory.js — wspólna pamięć Debraina, przez Supabase (darmowe na zawsze w rozsądnym
+// zakresie użycia — bez miesięcznego limitu zapytań, w przeciwieństwie do jsonbin.io).
+// Używa tej samej tabeli `debrain_store`, którą już masz przygotowaną dla Codex Center
+// (supabase/01_DEBRAIN_ONLINE.sql) — tylko innego wiersza (id="debrain-memory", Codex Center
+// używa "main"), żeby się wzajemnie nie nadpisywały.
 //
-// Env vary w Vercel:
-//   DEBRAIN_JSONBIN_BIN_ID — bin w jsonbin.io
-//   JSONBIN_API_KEY        — Twój X-Master-Key z jsonbin.io
+// Env vary w Vercel (te same, których już używa api/codex-tasks.js):
+//   SUPABASE_URL
+//   SUPABASE_SECRET_KEY albo SUPABASE_SERVICE_ROLE_KEY
 
-const BIN_ID = process.env.DEBRAIN_JSONBIN_BIN_ID;
-const KEY = process.env.JSONBIN_API_KEY;
-const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SECRET = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const STORE_ID = "debrain-memory";
 
 function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
 async function loadStore() {
-  const r = await fetch(`${BASE}/latest`, { headers: { "X-Master-Key": KEY } });
-  const data = await r.json();
-  const store = (data && data.record) || {};
-  store.folders = store.folders || {};
-  store.chats = store.chats || {};
-  store.activeChatId = store.activeChatId || null;
-  store.lastGreetingDate = store.lastGreetingDate || null;
-  store.vault = store.vault || {};   // { "nazwa-pliku.md": "treść" }
-  store.memory = store.memory || {}; // { "nazwa-pliku.md": "treść" } — destylowane lekcje
-  store.profile = store.profile || {"version": 1, "updatedAt": null, "basic": {"name": "Jakub", "language": "polski", "company": "Sklep za Stodołą", "role": "właściciel i osoba rozwijająca sprzedaż bezpośrednią dla rolników"}, "communication": {"style": "konkretnie, bez lania wody", "answerOrder": "najpierw rekomendacja, potem uzasadnienie i następny krok", "detailLevel": "średni; krótko przy prostych sprawach, dokładnie przy wdrożeniach", "tone": "spokojny, bez przesadnego entuzjazmu", "codeDelivery": "gotowe pliki ZIP i dokładna instrukcja wdrożenia"}, "workStyle": {"decisionStyle": "jedna rekomendowana opcja zamiast wielu równorzędnych", "pace": "szybkie wdrażanie i testowanie etapami", "organization": "panel jako centrum pracy", "priorities": ["sprzedaż", "follow-upy", "uruchomienie firmy", "CRM", "automatyzacja", "spójność desktop i decz.pl"]}, "likes": ["gotowe rozwiązania", "jasny następny krok", "podsumowanie wykonanych zmian", "automatyzacja", "ciągłość kontekstu"], "dislikes": ["powtarzanie ustaleń", "ogólne porady bez decyzji", "techniczne komunikaty wewnętrzne", "pięć równych opcji", "pytania doprecyzowujące bez potrzeby"], "motivators": ["widoczny postęp", "zamknięte zadania", "sprzedaż i kontakt z klientami", "działający system zamiast samego planu"], "habitsAndPatterns": [], "approvedObservations": [], "suggestions": []};
-
-  if (!Array.isArray(store.learningFeedback)) store.learningFeedback = [];
-  if (!store.dailyState || typeof store.dailyState !== 'object') store.dailyState = {};
-  if (!Array.isArray(store.crmClients)) store.crmClients = [];
-  if (!Array.isArray(store.stalledMatters)) store.stalledMatters = [];
-  if (!store.behaviorModel || typeof store.behaviorModel !== 'object') store.behaviorModel = {observations:[],version:1};
-  if (!store.settings || typeof store.settings !== 'object') store.settings = {};
-  if (!Array.isArray(store.syncQueue)) store.syncQueue = [];
-  if (!Array.isArray(store.changeHistory)) store.changeHistory = [];
-  if (!Array.isArray(store.knowledgeEntries)) {
-    const now = new Date().toISOString();
-    store.knowledgeEntries = [
-      { id:"knowledge_premium_price", category:"DECYZJA", text:"Domyślna oferta Premium kosztuje 14 500 EUR netto.", source:"ustalenia biznesowe", confidence:1, active:true, createdAt:now, updatedAt:now },
-      { id:"knowledge_offer_order", category:"ZASADA", text:"Najtańszego wariantu nie proponować na początku rozmowy; używać go dopiero przy obiekcji budżetowej.", source:"ustalenia sprzedażowe", confidence:1, active:true, createdAt:now, updatedAt:now },
-      { id:"knowledge_sales_start", category:"STATUS", text:"Sprzedaż mlekomatów ma ruszyć po przygotowaniu wersji pod polski system i walutę.", source:"ustalenia projektu", confidence:0.9, active:true, createdAt:now, updatedAt:now },
-      { id:"knowledge_zip_preference", category:"PREFERENCJA", text:"Przy zmianach technicznych użytkownik preferuje gotową paczkę ZIP i dokładną instrukcję wdrożenia.", source:"potwierdzone zachowanie użytkownika", confidence:1, active:true, createdAt:now, updatedAt:now }
-    ];
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/debrain_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
+    { headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}` } }
+  );
+  if (!response.ok) throw new Error(`Supabase GET ${response.status}: ${await response.text()}`);
+  const rows = await response.json();
+  if (!rows.length) {
+    // Pierwsze użycie — wiersz "debrain-memory" jeszcze nie istnieje, tworzymy go.
+    const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/debrain_store`, {
+      method: "POST",
+      headers: {
+        apikey: SECRET, Authorization: `Bearer ${SECRET}`,
+        "Content-Type": "application/json", Prefer: "return=representation,resolution=ignore-duplicates",
+      },
+      body: JSON.stringify({ id: STORE_ID, data: {}, version: 1 }),
+    });
+    if (!insertResp.ok) throw new Error(`Supabase INSERT ${insertResp.status}: ${await insertResp.text()}`);
+    return { data: {}, version: 1 };
   }
-  return store;
+  return { data: rows[0].data || {}, version: Number(rows[0].version || 1) };
 }
 
-async function saveStore(store) {
-  await fetch(BASE, {
-    method: "PUT",
-    headers: { "X-Master-Key": KEY, "Content-Type": "application/json" },
-    body: JSON.stringify(store),
+async function saveStore(expectedVersion, data) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_debrain_store`, {
+    method: "POST",
+    headers: {
+      apikey: SECRET, Authorization: `Bearer ${SECRET}`, "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ p_id: STORE_ID, p_expected_version: expectedVersion, p_data: data }),
   });
+  if (!response.ok) throw new Error(`Supabase SAVE ${response.status}: ${await response.text()}`);
+  const result = await response.json();
+  const row = Array.isArray(result) ? result[0] : result;
+  return Boolean(row && row.ok);
+}
+
+function withDefaults(data) {
+  data.folders = data.folders || {};
+  data.chats = data.chats || {};
+  data.activeChatId = data.activeChatId || null;
+  data.lastGreetingDate = data.lastGreetingDate || null;
+  data.vault = data.vault || {};
+  data.memory = data.memory || {};
+  return data;
+}
+
+async function mutate(mutator) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const store = await loadStore();
+    const data = withDefaults(structuredClone(store.data || {}));
+    const result = mutator(data);
+    if (await saveStore(store.version, data)) return result;
+  }
+  throw new Error("Konflikt wersji danych po 5 próbach — spróbuj ponownie.");
 }
 
 module.exports = async (req, res) => {
-  if (!BIN_ID || !KEY) {
-    res.status(200).json({ error: "Pamięć nieskonfigurowana (brak DEBRAIN_JSONBIN_BIN_ID / JSONBIN_API_KEY)." });
+  if (!SUPABASE_URL || !SECRET) {
+    res.status(200).json({ error: "Pamięć nieskonfigurowana (brak SUPABASE_URL / SUPABASE_SECRET_KEY)." });
     return;
   }
 
   if (req.method === "GET") {
     const store = await loadStore();
-    const folders = Object.entries(store.folders).map(([id, f]) => ({ id, name: f.name }));
-    const chats = Object.entries(store.chats).map(([id, c]) => ({
+    const data = withDefaults(store.data || {});
+    const folders = Object.entries(data.folders).map(([id, f]) => ({ id, name: f.name }));
+    const chats = Object.entries(data.chats).map(([id, c]) => ({
       id, title: c.title, folderId: c.folder_id || null, updated: c.updated,
     }));
-    res.status(200).json({ folders, chats, activeChatId: store.activeChatId });
+    res.status(200).json({ folders, chats, activeChatId: data.activeChatId });
     return;
   }
 
@@ -75,308 +95,170 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const body = req.body || {};
-  const action = body.action || req.query?.action || "";
-  const payload = body.payload || body.data || {};
-  const store = await loadStore();
+  const { action, payload } = req.body || {};
   const p = payload || {};
 
-  switch (action) {
-    case "getChat": {
-      const chat = store.chats[p.chatId];
-      if (!chat) { res.status(404).json({ error: "Nie znaleziono rozmowy." }); return; }
-      res.status(200).json({ id: p.chatId, title: chat.title, folderId: chat.folder_id || null, history: chat.history || [] });
-      return;
-    }
-
-    case "createChat": {
-      const id = newId();
-      const now = new Date().toISOString();
-      store.chats[id] = { title: p.title || "Nowa rozmowa", folder_id: p.folderId || null, history: [], created: now, updated: now };
-      store.activeChatId = id;
-      await saveStore(store);
-      res.status(200).json({ id });
-      return;
-    }
-
-    case "deleteChat": {
-      delete store.chats[p.chatId];
-      if (store.activeChatId === p.chatId) {
-        const remaining = Object.keys(store.chats);
-        store.activeChatId = remaining[0] || null;
+  try {
+    switch (action) {
+      case "getChat": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        const chat = data.chats[p.chatId];
+        if (!chat) { res.status(404).json({ error: "Nie znaleziono rozmowy." }); return; }
+        res.status(200).json({ id: p.chatId, title: chat.title, folderId: chat.folder_id || null, history: chat.history || [] });
+        return;
       }
-      await saveStore(store);
-      res.status(200).json({ ok: true, activeChatId: store.activeChatId });
-      return;
-    }
 
-    case "renameChat": {
-      if (store.chats[p.chatId]) store.chats[p.chatId].title = p.title;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
+      case "createChat": {
+        const id = newId();
+        const now = new Date().toISOString();
+        await mutate((data) => {
+          data.chats[id] = { title: p.title || "Nowa rozmowa", folder_id: p.folderId || null, history: [], created: now, updated: now };
+          data.activeChatId = id;
+        });
+        res.status(200).json({ id });
+        return;
+      }
 
-    case "moveChat": {
-      if (store.chats[p.chatId]) store.chats[p.chatId].folder_id = p.folderId || null;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    case "createFolder": {
-      const id = newId();
-      store.folders[id] = { name: p.name };
-      await saveStore(store);
-      res.status(200).json({ id });
-      return;
-    }
-
-    case "deleteFolder": {
-      delete store.folders[p.folderId];
-      Object.values(store.chats).forEach((c) => { if (c.folder_id === p.folderId) c.folder_id = null; });
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    case "renameFolder": {
-      if (store.folders[p.folderId]) store.folders[p.folderId].name = p.name;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    case "setActive": {
-      store.activeChatId = p.chatId;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    case "saveChatHistory": {
-      const chat = store.chats[p.chatId];
-      if (chat) {
-        chat.history = p.history || [];
-        chat.updated = new Date().toISOString();
-        if (!chat.title || chat.title === "Nowa rozmowa") {
-          const firstUser = chat.history.find((m) => m.role === "user");
-          if (firstUser) {
-            const t = firstUser.content.trim().replace(/\n/g, " ");
-            chat.title = t.length > 42 ? t.slice(0, 42) + "…" : t;
+      case "deleteChat": {
+        const activeChatId = await mutate((data) => {
+          delete data.chats[p.chatId];
+          if (data.activeChatId === p.chatId) {
+            const remaining = Object.keys(data.chats);
+            data.activeChatId = remaining[0] || null;
           }
-        }
+          return data.activeChatId;
+        });
+        res.status(200).json({ ok: true, activeChatId });
+        return;
       }
-      await saveStore(store);
-      res.status(200).json({ ok: true, title: chat ? chat.title : null });
-      return;
-    }
 
-    case "getGreetingStatus": {
-      res.status(200).json({ lastGreetingDate: store.lastGreetingDate });
-      return;
-    }
+      case "renameChat": {
+        await mutate((data) => { if (data.chats[p.chatId]) data.chats[p.chatId].title = p.title; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
-    case "setGreetingDate": {
-      store.lastGreetingDate = p.date;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
+      case "moveChat": {
+        await mutate((data) => { if (data.chats[p.chatId]) data.chats[p.chatId].folder_id = p.folderId || null; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
-    // ---------- Skarbiec (vault) ----------
-    case "vaultList": {
-      res.status(200).json({ files: Object.keys(store.vault) });
-      return;
-    }
-    case "vaultRead": {
-      res.status(200).json({ content: store.vault[p.filename] ?? null });
-      return;
-    }
-    case "vaultWrite": {
-      store.vault[p.filename] = p.content;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-    case "vaultDelete": {
-      delete store.vault[p.filename];
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
+      case "createFolder": {
+        const id = newId();
+        await mutate((data) => { data.folders[id] = { name: p.name }; });
+        res.status(200).json({ id });
+        return;
+      }
 
-    // ---------- Trwałe lekcje (memory) ----------
-    case "memoryList": {
-      res.status(200).json({ files: Object.keys(store.memory) });
-      return;
-    }
-    case "memoryRead": {
-      res.status(200).json({ content: store.memory[p.filename] ?? null });
-      return;
-    }
-    case "memoryWrite": {
-      store.memory[p.filename] = p.content;
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
-    case "memoryDelete": {
-      delete store.memory[p.filename];
-      await saveStore(store);
-      res.status(200).json({ ok: true });
-      return;
-    }
+      case "deleteFolder": {
+        await mutate((data) => {
+          delete data.folders[p.folderId];
+          Object.values(data.chats).forEach((c) => { if (c.folder_id === p.folderId) c.folder_id = null; });
+        });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
+      case "renameFolder": {
+        await mutate((data) => { if (data.folders[p.folderId]) data.folders[p.folderId].name = p.name; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
-    // ---------- Profil użytkownika i osobowość ----------
-    case "profileGet": {
-      res.status(200).json({ profile: store.profile }); return;
-    }
-    case "profileSave": {
-      store.profile = { ...store.profile, ...(p.profile || {}), updatedAt: new Date().toISOString() };
-      store.profile.suggestions = store.profile.suggestions || [];
-      store.profile.approvedObservations = store.profile.approvedObservations || [];
-      await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
-    }
-    case "profileAddSuggestion": {
-      const text = String(p.text || "").trim();
-      if (!text) { res.status(400).json({ error: "Pusta sugestia." }); return; }
-      store.profile.suggestions = store.profile.suggestions || [];
-      const duplicate = store.profile.suggestions.find(x => x.status === "pending" && String(x.text).toLowerCase() === text.toLowerCase());
-      if (duplicate) { res.status(200).json({ ok: true, duplicate: true, suggestion: duplicate }); return; }
-      const suggestion = { id: "sug_" + newId(), text, category: p.category || "osobowość", evidence: p.evidence || "", confidence: Number(p.confidence || 0.6), status: "pending", createdAt: new Date().toISOString() };
-      store.profile.suggestions.push(suggestion); await saveStore(store); res.status(200).json({ ok: true, suggestion }); return;
-    }
-    case "profileResolveSuggestion": {
-      const item = (store.profile.suggestions || []).find(x => x.id === p.suggestionId);
-      if (!item) { res.status(404).json({ error: "Nie znaleziono sugestii." }); return; }
-      item.status = p.resolution === "approve" ? "approved" : "rejected"; item.resolvedAt = new Date().toISOString();
-      if (item.status === "approved") { store.profile.approvedObservations = store.profile.approvedObservations || []; if (!store.profile.approvedObservations.includes(item.text)) store.profile.approvedObservations.push(item.text); }
-      await saveStore(store); res.status(200).json({ ok: true, profile: store.profile }); return;
-    }
+      case "setActive": {
+        await mutate((data) => { data.activeChatId = p.chatId; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
+      case "saveChatHistory": {
+        const title = await mutate((data) => {
+          const chat = data.chats[p.chatId];
+          if (chat) {
+            chat.history = p.history || [];
+            chat.updated = new Date().toISOString();
+            if (!chat.title || chat.title === "Nowa rozmowa") {
+              const firstUser = chat.history.find((m) => m.role === "user");
+              if (firstUser) {
+                const t = firstUser.content.trim().replace(/\n/g, " ");
+                chat.title = t.length > 42 ? t.slice(0, 42) + "…" : t;
+              }
+            }
+            return chat.title;
+          }
+          return null;
+        });
+        res.status(200).json({ ok: true, title });
+        return;
+      }
 
+      case "getGreetingStatus": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        res.status(200).json({ lastGreetingDate: data.lastGreetingDate });
+        return;
+      }
 
+      case "setGreetingDate": {
+        await mutate((data) => { data.lastGreetingDate = p.date; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
+      // ---------- Skarbiec (vault) ----------
+      case "vaultList": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        res.status(200).json({ files: Object.keys(data.vault) });
+        return;
+      }
+      case "vaultRead": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        res.status(200).json({ content: data.vault[p.filename] ?? null });
+        return;
+      }
+      case "vaultWrite": {
+        await mutate((data) => { data.vault[p.filename] = p.content; });
+        res.status(200).json({ ok: true });
+        return;
+      }
+      case "vaultDelete": {
+        await mutate((data) => { delete data.vault[p.filename]; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
+      // ---------- Trwałe lekcje (memory) ----------
+      case "memoryList": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        res.status(200).json({ files: Object.keys(data.memory) });
+        return;
+      }
+      case "memoryRead": {
+        const store = await loadStore();
+        const data = withDefaults(store.data || {});
+        res.status(200).json({ content: data.memory[p.filename] ?? null });
+        return;
+      }
+      case "memoryWrite": {
+        await mutate((data) => { data.memory[p.filename] = p.content; });
+        res.status(200).json({ ok: true });
+        return;
+      }
+      case "memoryDelete": {
+        await mutate((data) => { delete data.memory[p.filename]; });
+        res.status(200).json({ ok: true });
+        return;
+      }
 
-
-    case "settingsGet": {
-      res.status(200).json({settings:store.settings||{}});return;
+      default:
+        res.status(400).json({ error: "Nieznana akcja." });
     }
-    case "settingsSave": {
-      store.settings={...(store.settings||{}),...(p.settings||{}),updatedAt:new Date().toISOString()};
-      store.changeHistory.push({id:"chg_"+newId(),kind:"settings",summary:"Zmieniono ustawienia",createdAt:new Date().toISOString()});
-      store.changeHistory=store.changeHistory.slice(-500);
-      await saveStore(store);res.status(200).json({ok:true,settings:store.settings});return;
-    }
-    case "syncStatus": {
-      res.status(200).json({enabled:store.settings?.syncEnabled!==false,queue:store.syncQueue||[],version:store.version||1});return;
-    }
-    case "changeHistory": {
-      res.status(200).json({items:store.changeHistory||[]});return;
-    }
-
-    case "stalledMattersGet": {
-      res.status(200).json({items:Array.isArray(store.stalledMatters)?store.stalledMatters:[]});return;
-    }
-    case "stalledMattersSave": {
-      store.stalledMatters=Array.isArray(p.items)?p.items.slice(0,8):[];
-      await saveStore(store);res.status(200).json({ok:true,items:store.stalledMatters});return;
-    }
-    case "behaviorModelGet": {
-      res.status(200).json({model:store.behaviorModel||{observations:[],version:1}});return;
-    }
-    case "behaviorModelSave": {
-      store.behaviorModel={...(store.behaviorModel||{}),...(p.model||{}),updatedAt:new Date().toISOString()};
-      await saveStore(store);res.status(200).json({ok:true,model:store.behaviorModel});return;
-    }
-
-    case "crmList": {
-      let clients=Array.isArray(store.crmClients)?store.crmClients:[];
-      const f=p.filters||{};
-      if(f.status)clients=clients.filter(x=>x.status===f.status);
-      if(f.stage)clients=clients.filter(x=>x.stage===f.stage);
-      res.status(200).json({clients});return;
-    }
-    case "crmUpsert": {
-      const raw=p.client||{},now=new Date().toISOString(),id=String(raw.id||("crm_"+newId())),current=(store.crmClients||[]).find(x=>x.id===id);
-      const client={id,name:String(raw.name||"").trim(),contactPerson:"",phone:"",email:"",location:"",leadSource:"",product:"",opportunityValue:"",status:"nowy",stage:"lead",lastContact:"",nextFollowUp:"",advisorSent:false,offerSent:false,objections:"",notes:"",history:[],createdAt:current?.createdAt||now,...(current||{}),...raw,updatedAt:now};
-      if(!client.name){res.status(400).json({error:"Nazwa klienta jest wymagana."});return;}
-      store.crmClients=(store.crmClients||[]).filter(x=>x.id!==id);store.crmClients.push(client);await saveStore(store);res.status(200).json({ok:true,client});return;
-    }
-    case "crmDelete": {
-      const id=String(p.id||"");store.crmClients=(store.crmClients||[]).filter(x=>x.id!==id);await saveStore(store);res.status(200).json({ok:true});return;
-    }
-    case "crmAddActivity": {
-      const id=String(p.id||""),client=(store.crmClients||[]).find(x=>x.id===id);if(!client){res.status(404).json({error:"Nie znaleziono klienta."});return;}
-      const a=p.activity||{},text=String(a.text||"").trim();if(!text){res.status(400).json({error:"Treść aktywności jest wymagana."});return;}
-      const item={id:"act_"+newId(),type:String(a.type||"aktywność"),text,date:a.date||new Date().toISOString()};client.history=Array.isArray(client.history)?client.history:[];client.history.push(item);client.lastContact=item.date.slice(0,10);client.updatedAt=new Date().toISOString();await saveStore(store);res.status(200).json({ok:true,client});return;
-    }
-
-    case "dailyStateGet": {
-      res.status(200).json({state:store.dailyState||{}});return;
-    }
-    case "dailyStateSave": {
-      const now=new Date().toISOString();
-      store.dailyState={...(store.dailyState||{}),...(p.state||{}),date:new Date().toISOString().slice(0,10),updatedAt:now};
-      await saveStore(store);res.status(200).json({ok:true,state:store.dailyState});return;
-    }
-
-    case "learningList": {
-      let items=Array.isArray(store.learningFeedback)?store.learningFeedback:[];
-      if(p.status)items=items.filter(x=>x.status===p.status);
-      res.status(200).json({items});return;
-    }
-    case "learningUpsert": {
-      const raw=p.item||{},now=new Date().toISOString(),id=String(raw.id||("learn_"+newId())),current=(store.learningFeedback||[]).find(x=>x.id===id);
-      const item={...(current||{}),...raw,id,text:String(raw.text||"").trim(),kind:String(raw.kind||"PREFERENCJA").toUpperCase(),status:String(raw.status||"pending"),confidence:Math.max(0,Math.min(1,Number(raw.confidence??0.75))),createdAt:current?.createdAt||raw.createdAt||now,updatedAt:now};
-      if(!item.text){res.status(400).json({error:"Pusta treść reguły."});return;}
-      store.learningFeedback=(store.learningFeedback||[]).filter(x=>x.id!==id);store.learningFeedback.push(item);await saveStore(store);res.status(200).json({ok:true,item});return;
-    }
-    case "learningDelete": {
-      const id=String(p.id||"");store.learningFeedback=(store.learningFeedback||[]).filter(x=>x.id!==id);await saveStore(store);res.status(200).json({ok:true});return;
-    }
-
-    // ---------- Pamięć decyzji, faktów i ustaleń ----------
-    case "knowledgeList": {
-      let entries = Array.isArray(store.knowledgeEntries) ? store.knowledgeEntries : [];
-      if (p.category) entries = entries.filter(x => x.category === String(p.category).toUpperCase());
-      if (p.activeOnly) entries = entries.filter(x => x.active !== false);
-      entries.sort((a,b) => String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
-      res.status(200).json({ entries }); return;
-    }
-    case "knowledgeUpsert": {
-      const raw = p.entry || {};
-      const text = String(raw.text || "").trim();
-      if (!text) { res.status(400).json({ error: "Pusta treść wpisu." }); return; }
-      const allowed = ["DECYZJA","FAKT","STATUS","ZASADA","PREFERENCJA","CEL","RYZYKO","DO POTWIERDZENIA"];
-      const category = allowed.includes(String(raw.category||"").toUpperCase()) ? String(raw.category).toUpperCase() : "DO POTWIERDZENIA";
-      const now = new Date().toISOString();
-      const id = String(raw.id || ("know_" + newId()));
-      const current = (store.knowledgeEntries || []).find(x => x.id === id);
-      const entry = {
-        ...(current || {}),
-        ...raw,
-        id, category, text,
-        source: String(raw.source || "ręcznie"),
-        confidence: Math.max(0, Math.min(1, Number(raw.confidence ?? 1))),
-        active: raw.active !== false,
-        createdAt: current?.createdAt || raw.createdAt || now,
-        updatedAt: now
-      };
-      store.knowledgeEntries = (store.knowledgeEntries || []).filter(x => x.id !== id);
-      store.knowledgeEntries.push(entry);
-      await saveStore(store); res.status(200).json({ ok:true, entry }); return;
-    }
-    case "knowledgeDelete": {
-      const id = String(p.id || "");
-      store.knowledgeEntries = (store.knowledgeEntries || []).filter(x => x.id !== id);
-      await saveStore(store); res.status(200).json({ ok:true }); return;
-    }
-
-    default:
-      res.status(400).json({ error: `Nieznana akcja: ${action || "(brak)"}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
