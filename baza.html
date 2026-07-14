@@ -113,6 +113,17 @@
   summary.launcher-label::-webkit-details-marker{ display:none; }
   summary.launcher-label::before{ content:'▸ '; }
   details[open] summary.launcher-label::before{ content:'▾ '; }
+
+  .ct-widget{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-top:14px; }
+  .ct-widget-head{ display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:11px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px; }
+  .ct-open-link{ color:var(--gold); text-decoration:none; }
+  .ct-body{ font-size:12.5px; }
+  .ct-row{ display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .ct-row:last-child{ border-bottom:none; }
+  .ct-name{ color:var(--text); }
+  .ct-meta{ color:var(--text-muted); font-family:var(--font-mono); font-size:11px; white-space:nowrap; }
+  .ct-buy{ color:var(--sage); } .ct-sell{ color:var(--danger); }
+  .ct-fallback{ color:var(--text-muted); font-size:12px; line-height:1.6; }
   .launcher{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
   .launch-tile{
     background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px 10px 16px;
@@ -425,6 +436,14 @@
     </div>
   </details>
 
+  <div class="ct-widget" id="ctWidget">
+    <div class="ct-widget-head">
+      <span>◆ Capitol Trades — ostatnie transakcje</span>
+      <a href="https://www.capitoltrades.com" target="_blank" rel="noopener" class="ct-open-link">otwórz stronę →</a>
+    </div>
+    <div id="ctBody" class="ct-body">Ładowanie…</div>
+  </div>
+
   <div class="status-row">
     <div class="status-card">
       <span class="sc-label">EUR/PLN</span>
@@ -625,6 +644,7 @@ function boot(){
   loadData();
   loadEurRate();
   loadWeather();
+  loadCapitolTrades();
   renderCountdown();
   loadCalendar();
   loadActivityWatch();
@@ -632,6 +652,29 @@ function boot(){
     clearTimeout(priorityTimer);
     priorityTimer = setTimeout(()=>savePriority(e.target.value), 500);
   });
+}
+
+/* ---------- Capitol Trades (nieoficjalne, z bezpiecznikiem) ---------- */
+async function loadCapitolTrades(){
+  const body = document.getElementById('ctBody');
+  try{
+    const res = await fetch('/api/capitol-trades');
+    const data = await res.json();
+    if(!data.ok || !data.trades || !data.trades.length){
+      body.innerHTML = '<div class="ct-fallback">Nie udało się pobrać danych na żywo (strona źródłowa mogła zmienić strukturę). <a href="https://www.capitoltrades.com" target="_blank" rel="noopener" style="color:var(--gold)">Otwórz stronę bezpośrednio →</a></div>';
+      return;
+    }
+    body.innerHTML = data.trades.slice(0,8).map(t => {
+      if(t.raw) return `<div class="ct-row"><span class="ct-name">${escapeHtml(t.raw)}</span></div>`;
+      const pol = t.politician?.name || t.politician || '—';
+      const issuer = t.issuer?.name || t.issuer?.ticker || '';
+      const type = (t.type || t.txType || '').toLowerCase();
+      const cls = type.includes('buy') ? 'ct-buy' : type.includes('sell') ? 'ct-sell' : '';
+      return `<div class="ct-row"><span class="ct-name">${escapeHtml(pol)} — ${escapeHtml(issuer)}</span><span class="ct-meta ${cls}">${escapeHtml(type || '—')}</span></div>`;
+    }).join('');
+  }catch(e){
+    body.innerHTML = '<div class="ct-fallback">Błąd wczytywania. <a href="https://www.capitoltrades.com" target="_blank" rel="noopener" style="color:var(--gold)">Otwórz stronę bezpośrednio →</a></div>';
+  }
 }
 
 /* ---------- EUR/PLN (NBP API) ---------- */
