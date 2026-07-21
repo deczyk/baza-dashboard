@@ -658,16 +658,16 @@ function boot(){
 async function loadCapitolTrades(){
   const body = document.getElementById('ctBody');
   try{
-    const res = await fetch('/api/baza-data?resource=capitol-trades');
+    const res = await fetch('https://www.bargo.ai/free-apis/congress/v1/trades?limit=15');
     const data = await res.json();
-    if(!data.ok || !data.trades || !data.trades.length){
+    if(!res.ok || !data.trades || !data.trades.length){
       body.innerHTML = '<div class="ct-fallback">Nie udało się pobrać danych na żywo (strona źródłowa mogła zmienić strukturę). <a href="https://www.capitoltrades.com" target="_blank" rel="noopener" style="color:var(--gold)">Otwórz stronę bezpośrednio →</a></div>';
       return;
     }
     body.innerHTML = data.trades.slice(0,8).map(t => {
       if(t.raw) return `<div class="ct-row"><span class="ct-name">${escapeHtml(t.raw)}</span></div>`;
-      const pol = t.politician?.name || t.politician || '—';
-      const issuer = t.issuer?.name || t.issuer?.ticker || '';
+        const pol = t.member || t.politician?.name || t.politician || '—';
+        const issuer = t.asset || t.ticker || t.issuer?.name || t.issuer?.ticker || '';
       const type = (t.type || t.txType || '').toLowerCase();
       const cls = type.includes('buy') ? 'ct-buy' : type.includes('sell') ? 'ct-sell' : '';
       return `<div class="ct-row"><span class="ct-name">${escapeHtml(pol)} — ${escapeHtml(issuer)}</span><span class="ct-meta ${cls}">${escapeHtml(type || '—')}</span></div>`;
