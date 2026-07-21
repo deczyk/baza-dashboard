@@ -310,6 +310,28 @@
   }
   #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* ---------- Debrain w Bazie ---------- */
+  .debrain-overlay{ position:fixed; inset:0; z-index:80; background:rgba(8,12,14,.72); backdrop-filter:blur(5px); display:none; align-items:center; justify-content:center; padding:18px; }
+  .debrain-overlay.open{ display:flex; }
+  .debrain-chat{ width:min(720px,100%); height:min(760px,92vh); background:var(--bg); border:1px solid var(--line); border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 80px rgba(0,0,0,.45); }
+  .debrain-head{ padding:15px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+  .debrain-head strong{ color:var(--gold); }
+  .debrain-head span{ color:var(--text-muted); font-family:var(--font-mono); font-size:10px; }
+  .debrain-close{ margin-left:auto; background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; }
+  .debrain-quick{ display:flex; gap:7px; padding:10px 14px; overflow-x:auto; border-bottom:1px solid var(--line); }
+  .debrain-quick button{ flex:0 0 auto; background:var(--surface); border:1px solid var(--line); border-radius:18px; color:var(--text-muted); padding:7px 11px; font-size:11px; cursor:pointer; }
+  .debrain-quick button:hover{ border-color:var(--gold); color:var(--text); }
+  .debrain-log{ flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
+  .debrain-msg{ max-width:86%; padding:11px 13px; border-radius:13px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; }
+  .debrain-msg.user{ align-self:flex-end; background:var(--gold); color:#14181B; border-bottom-right-radius:4px; }
+  .debrain-msg.assistant{ align-self:flex-start; background:var(--surface); border:1px solid var(--line); color:var(--text); border-bottom-left-radius:4px; }
+  .debrain-msg.status{ color:var(--text-muted); font-family:var(--font-mono); font-size:11px; }
+  .debrain-form{ display:flex; gap:8px; padding:12px; border-top:1px solid var(--line); background:var(--surface); }
+  .debrain-form textarea{ flex:1; resize:none; min-height:44px; max-height:110px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:11px 12px; color:var(--text); font-family:var(--font-sans); outline:none; }
+  .debrain-form textarea:focus{ border-color:var(--gold); }
+  .debrain-send{ align-self:flex-end; height:44px; background:var(--gold); color:#14181B; border:none; border-radius:10px; padding:0 16px; font-weight:700; cursor:pointer; }
+  .debrain-send:disabled{ opacity:.5; cursor:wait; }
+
   ::selection{ background:var(--gold); color:#14181B; }
 
   /* ---------- Wersja desktopowa (szersza) — telefon zostaje bez zmian ---------- */
@@ -387,6 +409,16 @@
       <div class="glyph">✨</div>
       <div class="lbl">Claude</div>
       <div class="sub">Chat / appka</div>
+    </a>
+    <a class="launch-tile" href="#" onclick="openDebrainChat();return false">
+      <div class="glyph" style="background:rgba(201,168,118,0.16);color:var(--gold)">🧠</div>
+      <div class="lbl">Debrain</div>
+      <div class="sub">Zapytaj o dzisiaj</div>
+    </a>
+    <a class="launch-tile" href="vault_graph.html">
+      <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">🕸️</div>
+      <div class="lbl">Graf wiedzy</div>
+      <div class="sub">Skarbiec Debraina</div>
     </a>
     <a class="launch-tile" href="https://web.whatsapp.com" target="_blank" rel="noopener" onclick="return openApp(event, 'whatsapp://', 'https://web.whatsapp.com')">
       <div class="glyph" style="background:rgba(107,156,137,0.16);color:var(--sage)">💬</div>
@@ -581,6 +613,25 @@
 
 <div id="toast"></div>
 
+<div class="debrain-overlay" id="debrainOverlay" onclick="if(event.target===this) closeDebrainChat()">
+  <section class="debrain-chat" role="dialog" aria-modal="true" aria-label="Czat z Debrainem">
+    <div class="debrain-head">
+      <strong>◆ Debrain</strong><span>zna Bazę, kalendarz i skarbiec</span>
+      <button class="debrain-close" onclick="closeDebrainChat()" aria-label="Zamknij">✕</button>
+    </div>
+    <div class="debrain-quick">
+      <button onclick="askDebrainQuick('Nie wiem, co dziś zrobić. Sprawdź moje aktualne dane Bazy, nawyki, zadania i kalendarz. Wybierz jedną najważniejszą rzecz i podaj mi pierwszy krok.')">Nie wiem, co dziś zrobić</button>
+      <button onclick="askDebrainQuick('Sprawdź moje dzisiejsze nawyki i powiedz krótko, co jeszcze zostało do zrobienia.')">Co zostało z nawyków?</button>
+      <button onclick="askDebrainQuick('Sprawdź mój kalendarz i zadania. Ułóż realistyczny plan na resztę dnia.')">Plan na resztę dnia</button>
+    </div>
+    <div class="debrain-log" id="debrainLog"></div>
+    <form class="debrain-form" onsubmit="sendDebrainMessage(event)">
+      <textarea id="debrainInput" rows="1" placeholder="Napisz do Debraina…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit()}"></textarea>
+      <button class="debrain-send" id="debrainSend" type="submit">Wyślij</button>
+    </form>
+  </section>
+</div>
+
 <script>
 /* =========================================================
    KONFIGURACJA
@@ -613,6 +664,105 @@ let DATA = { links: [], notes: [], todos: [], shoppingList: [], priority: { text
 ] };
 let saveTimer = null;
 let priorityTimer = null;
+
+/* ---------- Czat Debrain w Bazie ---------- */
+let DEBRAIN_HISTORY = [];
+try{ DEBRAIN_HISTORY = JSON.parse(localStorage.getItem('baza_debrain_history') || '[]'); }catch(e){ DEBRAIN_HISTORY = []; }
+let debrainBusy = false;
+
+function openDebrainChat(){
+  document.getElementById('debrainOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderDebrainHistory();
+  setTimeout(()=>document.getElementById('debrainInput').focus(), 50);
+}
+function closeDebrainChat(){
+  document.getElementById('debrainOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function renderDebrainHistory(){
+  const log = document.getElementById('debrainLog');
+  if(!DEBRAIN_HISTORY.length){
+    log.innerHTML = '<div class="debrain-msg assistant">Cześć. Mogę sprawdzić Twoje dzisiejsze zadania, nawyki, priorytet, kalendarz oraz notatki Debraina. Od czego zaczynamy?</div>';
+  }else{
+    log.innerHTML = '';
+    DEBRAIN_HISTORY.filter(m=>(m.role==='user'||m.role==='assistant') && typeof m.content==='string' && m.content.trim()).forEach(m=>appendDebrainBubble(m.role, m.content));
+  }
+  log.scrollTop = log.scrollHeight;
+}
+function appendDebrainBubble(role, content, extraClass=''){
+  const el = document.createElement('div');
+  el.className = `debrain-msg ${role} ${extraClass}`.trim();
+  el.textContent = content;
+  document.getElementById('debrainLog').appendChild(el);
+  document.getElementById('debrainLog').scrollTop = document.getElementById('debrainLog').scrollHeight;
+  return el;
+}
+function askDebrainQuick(text){
+  if(debrainBusy) return;
+  document.getElementById('debrainInput').value = text;
+  document.querySelector('.debrain-form').requestSubmit();
+}
+async function sendDebrainMessage(event){
+  event.preventDefault();
+  if(debrainBusy) return;
+  const input = document.getElementById('debrainInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  DEBRAIN_HISTORY.push({role:'user', content:text});
+  appendDebrainBubble('user', text);
+  const status = appendDebrainBubble('assistant', 'Debrain sprawdza dane…', 'status');
+  debrainBusy = true;
+  document.getElementById('debrainSend').disabled = true;
+
+  try{
+    const response = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({history:DEBRAIN_HISTORY.slice(-24), model:'deepseek-chat'}),
+    });
+    if(!response.ok || !response.body) throw new Error(`Błąd połączenia (${response.status})`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalEvent = null;
+    while(true){
+      const {value, done} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream:true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for(const line of lines){
+        if(!line.trim()) continue;
+        const item = JSON.parse(line);
+        if(item.type==='tool_start') status.textContent = 'Debrain analizuje Bazę…';
+        if(item.type==='final') finalEvent = item;
+      }
+    }
+    if(buffer.trim()){
+      const item = JSON.parse(buffer);
+      if(item.type==='final') finalEvent = item;
+    }
+    if(!finalEvent || finalEvent.error) throw new Error(finalEvent?.error || 'Brak odpowiedzi Debraina');
+    status.classList.remove('status');
+    status.textContent = finalEvent.reply;
+    DEBRAIN_HISTORY = (finalEvent.history || [...DEBRAIN_HISTORY, {role:'assistant', content:finalEvent.reply}])
+      .filter(m=>(m.role==='user'||m.role==='assistant') && typeof m.content==='string' && m.content.trim()).slice(-24);
+    localStorage.setItem('baza_debrain_history', JSON.stringify(DEBRAIN_HISTORY));
+  }catch(error){
+    status.classList.remove('status');
+    status.textContent = 'Nie udało się połączyć z Debrainem: ' + error.message;
+  }finally{
+    debrainBusy = false;
+    document.getElementById('debrainSend').disabled = false;
+    document.getElementById('debrainInput').focus();
+  }
+}
+
+document.addEventListener('keydown', event=>{
+  if(event.key==='Escape' && document.getElementById('debrainOverlay').classList.contains('open')) closeDebrainChat();
+});
 
 /* ---------- Gate ---------- */
 function tryUnlock(){

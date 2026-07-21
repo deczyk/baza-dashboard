@@ -60,14 +60,14 @@
 
 <header>
   <div><span class="brand">Skarbiec</span><span class="tag">graf połączeń</span></div>
-  <a class="back-link" href="/">◆ Wróć do Debraina</a>
+  <a class="back-link" href="/baza.html">◆ Wróć do Bazy</a>
 </header>
 
 <div id="graph"></div>
 <div id="emptyState" class="empty-state" style="display:none">
   <div class="big">Skarbiec jest jeszcze pusty albo notatki nie mają połączeń.</div>
   <div class="small">
-    Dodaj pliki .md do <code>vault/</code> i odwołuj się w nich do innych notatek pisząc<br>
+    Dodaj notatki do Skarbca Debraina i odwołuj się w nich do innych notatek pisząc<br>
     <code>[[Nazwa Innej Notatki]]</code> — dokładnie tak jak w Obsidianie.<br>
     Bez tych odnośników notatki istnieją, ale graf nie ma czego łączyć.
   </div>
@@ -87,13 +87,23 @@
   const sidepanel = document.getElementById('sidepanel');
   function closePanel(){ sidepanel.classList.remove('open'); }
 
+  async function memoryAction(action, payload = {}){
+    const res = await fetch('/api/debrain-memory', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action, payload}),
+    });
+    const data = await res.json();
+    if(!res.ok || data.error) throw new Error(data.error || `Błąd ${res.status}`);
+    return data;
+  }
+
   async function openNote(path, label){
     document.getElementById('noteTitle').textContent = label;
     document.getElementById('noteBody').textContent = 'Ładowanie…';
     sidepanel.classList.add('open');
     try {
-      const res = await fetch('/api/vault-note?path=' + encodeURIComponent(path));
-      const data = await res.json();
+      const data = await memoryAction('vaultRead', { filename:path });
       document.getElementById('noteBody').textContent = data.content || '(pusty plik)';
     } catch (e) {
       document.getElementById('noteBody').textContent = 'Błąd wczytywania: ' + e.message;
@@ -101,10 +111,49 @@
   }
 
   async function loadGraph(){
-    const res = await fetch('/api/vault-graph');
-    const data = await res.json();
+    try{
+      const list = await memoryAction('vaultList');
+      const files = list.files || [];
+      const notes = await Promise.all(files.map(async filename => ({
+        filename,
+        content:(await memoryAction('vaultRead', {filename})).content || '',
+      })));
+      const aliases = new Map();
+      files.forEach(filename => {
+        const base = filename.replace(/\.md$/i, '');
+        aliases.set(filename.toLowerCase(), filename);
+        aliases.set(base.toLowerCase(), filename);
+      });
+      const edgeKeys = new Set();
+      const edges = [];
+      notes.forEach(note => {
+        const links = [...note.content.matchAll(/\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g)];
+        links.forEach(match => {
+          const target = aliases.get(match[1].trim().toLowerCase());
+          if(!target || target === note.filename) return;
+          const key = [note.filename, target].sort().join('→');
+          if(edgeKeys.has(key)) return;
+          edgeKeys.add(key);
+          edges.push({from:note.filename, to:target});
+        });
+      });
+      const connected = new Set(edges.flatMap(edge => [edge.from, edge.to]));
+      const nodes = files.map(filename => ({
+        id:filename,
+        label:filename.replace(/\.md$/i, ''),
+        group:connected.has(filename) ? 'połączona' : 'samotna',
+      }));
+      renderGraph({nodes, edges});
+    }catch(error){
+      document.getElementById('emptyState').style.display = 'flex';
+      document.querySelector('#emptyState .big').textContent = 'Nie udało się wczytać grafu.';
+      document.querySelector('#emptyState .small').textContent = error.message;
+    }
+  }
 
-    if (!data.nodes || data.nodes.length === 0 || data.edges.length === 0) {
+  function renderGraph(data){
+
+    if (!data.nodes || data.nodes.length === 0) {
       document.getElementById('emptyState').style.display = 'flex';
       return;
     }
