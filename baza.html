@@ -658,7 +658,7 @@ function boot(){
 async function loadCapitolTrades(){
   const body = document.getElementById('ctBody');
   try{
-    const res = await fetch('/api/capitol-trades');
+    const res = await fetch('/api/baza-data?resource=capitol-trades');
     const data = await res.json();
     if(!data.ok || !data.trades || !data.trades.length){
       body.innerHTML = '<div class="ct-fallback">Nie udało się pobrać danych na żywo (strona źródłowa mogła zmienić strukturę). <a href="https://www.capitoltrades.com" target="_blank" rel="noopener" style="color:var(--gold)">Otwórz stronę bezpośrednio →</a></div>';
