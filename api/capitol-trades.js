@@ -6,6 +6,38 @@
 
 module.exports = async (req, res) => {
   try {
+    // Publiczny kanał JSON nie wymaga scrapowania HTML i działa także z Vercela.
+    const apiResponse = await fetch("https://www.bargo.ai/free-apis/congress/v1/trades?limit=15", {
+      headers: { "Accept": "application/json" },
+    });
+
+    if (apiResponse.ok) {
+      const payload = await apiResponse.json();
+      const apiTrades = Array.isArray(payload.trades) ? payload.trades.map(trade => ({
+        politician: { name: trade.member || "—" },
+        issuer: {
+          name: trade.asset || trade.ticker || "—",
+          ticker: trade.ticker || "",
+        },
+        type: trade.type || "",
+        transactionDate: trade.transaction_date || "",
+        disclosureDate: trade.disclosure_date || "",
+        amount: trade.amount_range || "",
+      })) : [];
+
+      if (apiTrades.length) {
+        res.setHeader("Cache-Control", "s-maxage=900, stale-while-revalidate=3600");
+        res.status(200).json({
+          ok: true,
+          trades: apiTrades,
+          source: "Bargo Congress Trades",
+          fetchedAt: new Date().toISOString(),
+        });
+        return;
+      }
+    }
+
+    // Awaryjnie próbujemy dotychczasowego źródła HTML.
     const response = await fetch("https://www.capitoltrades.com/trades", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
