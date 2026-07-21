@@ -3,152 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poradnik — podstawowe rozciąganie</title>
+<title>Poranne rozciąganie — 5 minut</title>
 <style>
   :root{
     --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
-    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93;
+    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
     --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
     --font-sans:'Inter', -apple-system, system-ui, sans-serif;
   }
   *{box-sizing:border-box;}
-  body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); -webkit-font-smoothing:antialiased; }
-  .wrap{ max-width:680px; margin:0 auto; padding:32px 20px 80px; }
-  .eyebrow{ font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px; }
-  h1{ font-size:26px; margin:0 0 6px; }
-  .source{ font-size:12px; color:var(--text-muted); margin-bottom:28px; }
-  .source a{ color:var(--sage); }
-  .intro{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:24px; font-size:14.5px; line-height:1.6; }
-  .intro b{ color:var(--gold); }
-  .rules{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
-  .rule-pill{ font-family:var(--font-mono); font-size:11px; background:var(--surface-2); border:1px solid var(--line); border-radius:20px; padding:5px 12px; color:var(--text-muted); }
-  h2{ font-size:12px; font-family:var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin:34px 0 4px; }
-  .stretch-card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:14px; display:grid; grid-template-columns:90px 1fr; gap:16px; align-items:center; }
-  .stretch-card svg{ width:100%; height:auto; }
-  .stretch-card h3{ margin:0 0 8px; font-size:16px; color:var(--text); }
-  .stretch-card p{ margin:0; font-size:13.5px; line-height:1.55; color:var(--text-muted); }
-  .stretch-card .hold{ display:inline-block; margin-top:8px; font-family:var(--font-mono); font-size:11px; color:var(--sage); }
-  @media(max-width:480px){ .stretch-card{ grid-template-columns:70px 1fr; padding:14px; } }
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:680px; margin:0 auto; padding:32px 20px 80px;}
+  .eyebrow{font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;}
+  h1{font-size:28px; margin:0 0 8px;}
+  .subtitle{font-size:14px; color:var(--text-muted); margin-bottom:24px; line-height:1.5;}
+  .intro{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:28px; font-size:14.5px; line-height:1.6;}
+  .intro b{color:var(--gold);}
+  .rules{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+  .rule-pill{font-family:var(--font-mono); font-size:11px; background:var(--surface-2); border:1px solid var(--line); border-radius:20px; padding:5px 12px; color:var(--text-muted);}
+  h2{font-size:12px; font-family:var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin:34px 0 12px;}
+  .stretch-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:12px; display:grid; grid-template-columns:74px 1fr; gap:16px; align-items:start;}
+  .time{font-family:var(--font-mono); font-size:12px; color:var(--sage); background:rgba(107,156,137,.12); border-radius:10px; padding:9px 7px; text-align:center; white-space:nowrap;}
+  .stretch-card h3{margin:1px 0 7px; font-size:16px; color:var(--text);}
+  .stretch-card p{margin:0; font-size:13.5px; line-height:1.55; color:var(--text-muted);}
+  .side{display:inline-block; margin-top:8px; font-family:var(--font-mono); font-size:11px; color:var(--gold);}
+  .finish{margin-top:22px; padding:16px 18px; border-left:3px solid var(--sage); background:var(--surface); border-radius:0 12px 12px 0; font-size:13.5px; line-height:1.55; color:var(--text-muted);}
+  .warning{margin-top:24px; font-size:12px; line-height:1.5; color:var(--text-muted);}
+  @media(max-width:480px){
+    .wrap{padding:24px 14px 60px;}
+    .stretch-card{grid-template-columns:62px 1fr; padding:15px 14px; gap:12px;}
+    h1{font-size:24px;}
+    .time{font-size:10px; padding:8px 4px;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="eyebrow">◆ Poradnik</div>
-  <h1>Podstawowe rozciąganie</h1>
-  <div class="source">Opracowane na podstawie ogólnych zaleceń dot. rozciągania (m.in. Mayo Clinic, ACSM). Pełne źródło: <a href="https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/stretching/art-20546848" target="_blank">mayoclinic.org</a></div>
+<main class="wrap">
+  <div class="eyebrow">◆ Poranny reset</div>
+  <h1>5 minut rozciągania</h1>
+  <div class="subtitle">Prosta rutyna całego ciała dla osoby, która dużo siedzi przy komputerze. Bez maty, sprzętu i stroju sportowego.</div>
 
   <div class="intro">
-    Rozciąganie zwiększa zakres ruchu w stawach i pomaga chronić przed kontuzjami. <b>Rozciągaj się po rozgrzewce</b> (5-10 min lekkiego ruchu) albo po treningu — nigdy na zimnych mięśniach.
+    Włącz minutnik na <b>5:00</b> i wykonuj ruchy po kolei. To ma być łagodne rozruszanie, nie trening — oddychaj swobodnie i rozciągaj tylko do uczucia lekkiego napięcia.
     <div class="rules">
-      <span class="rule-pill">Bez odbijania</span>
-      <span class="rule-pill">Oddychaj spokojnie</span>
-      <span class="rule-pill">Ból = za daleko</span>
-      <span class="rule-pill">Trzymaj ~30 sek.</span>
-      <span class="rule-pill">2-4 powtórzenia / stronę</span>
-      <span class="rule-pill">2-3x w tygodniu</span>
+      <span class="rule-pill">Bez szarpania</span>
+      <span class="rule-pill">Bez bólu</span>
+      <span class="rule-pill">Spokojny oddech</span>
+      <span class="rule-pill">Codziennie rano</span>
     </div>
   </div>
 
-  <h2>Rozgrzewka przed treningiem — małe mieszkanie, bez sprzętu, cicho</h2>
-  <div class="stretch-card" style="grid-template-columns:1fr">
+  <h2>Rutyna — dokładnie 5 minut</h2>
+
+  <section class="stretch-card">
+    <div class="time">0:00–0:40</div>
     <div>
-      <p>5 minut, ~1-2m² miejsca, zero skoków (sąsiedzi śpią spokojnie). Rób po kolei, każde 30-40 sek.:</p>
-      <p><b>1. Marsz w miejscu</b> — unoś kolana wysoko, ręce naprzemiennie w takt kroków.</p>
-      <p><b>2. Krążenia ramion</b> — duże koła do przodu (10x), potem do tyłu (10x).</p>
-      <p><b>3. Krążenia bioder</b> — dłonie na biodrach, duże koła w jedną, potem drugą stronę.</p>
-      <p><b>4. Wykroki naprzemienne w miejscu</b> — krok do przodu, powrót, druga noga (bez wychodzenia daleko).</p>
-      <p><b>5. Krążenia kolan i kostek</b> — stojąc, lekko ugięte kolana, małe koła; potem wspięcia na palce (10x).</p>
-      <p><b>6. Rotacje tułowia</b> — ręce skrzyżowane na klatce, skręty w lewo/prawo w rytmicznym tempie.</p>
-      <p style="color:var(--text-muted);margin-top:12px">Cel: podniesione tętno, ciepłe mięśnie, ruchome stawy — zero hałasu, zero potrzeby miejsca większego niż dywan pod stopami.</p>
+      <h3>Marsz i krążenia barków</h3>
+      <p>Maszeruj spokojnie w miejscu. Jednocześnie zataczaj barkami duże koła: najpierw do tyłu, potem do przodu. Rozluźnij ręce i szczękę.</p>
     </div>
-  </div>
+  </section>
 
-  <h2>Nogi</h2>
-
-  <div class="stretch-card">
-    <img src="WF619106-1-Calf-stretch-en.avif" alt="Łydka" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">0:40–1:20</div>
     <div>
-      <h3>Łydka</h3>
-      <p>Stań w odległości ramienia od ściany. Prawą stopę cofnij za lewą. Ugnij lewą nogę do przodu, prawą kolano proste, prawa pięta na podłodze. Plecy proste, biodra do przodu.</p>
-      <span class="hold">30 sek. · zmień nogę</span>
+      <h3>Kark i szyja</h3>
+      <p>Stań prosto. Opuść prawe ucho w stronę prawego barku, bez unoszenia barku. Nie ciągnij głowy ręką. Zmień stronę po 20 sekundach.</p>
+      <span class="side">20 sek. na stronę</span>
     </div>
-  </div>
+  </section>
 
-  <div class="stretch-card">
-    <img src="WF619106-5-Hamstring-stretch-en.avif" alt="Tył uda" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">1:20–2:00</div>
     <div>
-      <h3>Tył uda (hamstring)</h3>
-      <p>Połóż się blisko futryny drzwi tak, żeby jedna noga leżała wzdłuż ściany. Unieś ją, oprzyj piętę o ścianę, kolano lekko ugięte. Powoli prostuj nogę aż poczujesz naciąg z tyłu uda.</p>
-      <span class="hold">30 sek. · zmień nogę</span>
+      <h3>Klatka piersiowa i ramiona</h3>
+      <p>Spleć dłonie za plecami albo oprzyj przedramiona o futrynę. Cofnij barki, lekko unieś mostek i patrz przed siebie. Nie wyginaj dolnych pleców.</p>
     </div>
-  </div>
+  </section>
 
-  <div class="stretch-card">
-    <img src="WF619106-2-Quadriceps-stretch-en.avif" alt="Przód uda" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">2:00–2:50</div>
     <div>
-      <h3>Przód uda (quadriceps)</h3>
-      <p>Stań przy ścianie dla wsparcia. Chwyć kostkę i delikatnie podciągnij piętę do góry i do tyłu, aż poczujesz naciąg z przodu uda. Napnij brzuch, kolana blisko siebie.</p>
-      <span class="hold">30 sek. · zmień nogę</span>
+      <h3>Boki i górna część pleców</h3>
+      <p>Unieś ręce nad głowę i pochyl tułów lekko w bok. Po 15 sekundach zmień stronę. Na koniec wyciągnij obie ręce przed siebie, zaokrąglij górę pleców i rozsuń łopatki.</p>
+      <span class="side">15 sek. lewo · 15 sek. prawo · 20 sek. plecy</span>
     </div>
-  </div>
+  </section>
 
-  <div class="stretch-card">
-    <img src="WF619106-6-Hip-flexor-stretch-en.avif" alt="Zginacz biodra" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">2:50–3:50</div>
     <div>
-      <h3>Zginacz biodra</h3>
-      <p>Klęknij na prawym kolanie (podłóż ręcznik). Lewą stopę postaw z przodu, kolano ugięte. Prawą ręką trzymaj biodro, plecy proste. Przenieś ciężar do przodu — poczujesz naciąg z przodu prawego uda.</p>
-      <span class="hold">30 sek. · zmień stronę</span>
+      <h3>Zginacze bioder</h3>
+      <p>Zrób mały wykrok. Tylna noga zostaje prosta, pięta może się unieść. Podwiń lekko miednicę i przesuń biodra do przodu, aż poczujesz przód biodra tylnej nogi.</p>
+      <span class="side">30 sek. na stronę</span>
     </div>
-  </div>
+  </section>
 
-  <div class="stretch-card">
-    <img src="WF619106-7-ITB-stretch-V2-en.avif" alt="Pasmo biodrowo-piszczelowe" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">3:50–4:30</div>
     <div>
-      <h3>Pasmo biodrowo-piszczelowe (ITB)</h3>
-      <p>Stań przy ścianie. Skrzyżuj lewą nogę za prawą przy kostce. Wyciągnij lewą rękę nad głową w prawo — poczujesz naciąg wzdłuż lewego biodra.</p>
-      <span class="hold">30 sek. · zmień stronę</span>
+      <h3>Tył nóg</h3>
+      <p>Postaw jedną piętę trochę przed sobą, palce skieruj do góry. Ugnij drugą nogę i pochyl prosty tułów lekko do przodu. Zmień nogę po 20 sekundach.</p>
+      <span class="side">20 sek. na stronę</span>
     </div>
-  </div>
+  </section>
 
-  <div class="stretch-card">
-    <img src="WF619106-3-Knee-to-chest-stretch-en.avif" alt="Kolano do klatki" style="width:100%;border-radius:10px">
+  <section class="stretch-card">
+    <div class="time">4:30–5:00</div>
     <div>
-      <h3>Kolano do klatki</h3>
-      <p>Rozciąga dolny odcinek pleców. Połóż się na plecach, pięty płasko. Podciągnij jedno kolano do klatki jak najbliżej wygodnie się da. Druga noga rozluźniona.</p>
-      <span class="hold">30 sek. · zmień nogę</span>
-      <p style="margin-top:8px;color:#B4664F;font-size:12px;">⚠ Przy osteoporozie — unikaj (ryzyko złamania kompresyjnego kręgów)</p>
+      <h3>Wyprost i spokojny oddech</h3>
+      <p>Stań wygodnie. Z wdechem unieś ręce, wyciągnij całe ciało w górę. Z wydechem opuść ręce i barki. Powtórz powoli 3–4 razy.</p>
     </div>
-  </div>
+  </section>
 
-  <h2>Góra ciała</h2>
-
-  <div class="stretch-card">
-    <img src="WF619106-4-Shoulder-stretch-en.avif" alt="Bark" style="width:100%;border-radius:10px">
-    <div>
-      <h3>Bark</h3>
-      <p>Przełóż lewą rękę w poprzek klatki piersiowej. Przytrzymaj ją prawą ręką, powyżej lub poniżej łokcia, delikatnie dociskając do siebie.</p>
-      <span class="hold">30 sek. · zmień ramię</span>
-    </div>
-  </div>
-
-  <div class="stretch-card">
-    <img src="WF619106-8-Shoulder-stretch-with-towel-en.avif" alt="Bark z ręcznikiem" style="width:100%;border-radius:10px">
-    <div>
-      <h3>Bark z ręcznikiem</h3>
-      <p>Chwyć zwinięty ręcznik oburącz za plecami — jedna ręka nad barkiem, druga pod dolnym plecami. Górną ręką delikatnie ciągnij w górę — dolne ramię poczuje naciąg.</p>
-      <span class="hold">30 sek. · zmień ręce</span>
-    </div>
-  </div>
-
-  <div class="stretch-card">
-    <img src="WF619106-9-Neck-stretch-V2-en.avif" alt="Szyja" style="width:100%;border-radius:10px">
-    <div>
-      <h3>Szyja</h3>
-      <p>Pochyl głowę do przodu i lekko w prawo. Prawą ręką delikatnie dociśnij głowę w dół — poczujesz naciąg wzdłuż lewej strony karku.</p>
-      <span class="hold">30 sek. · zmień stronę</span>
-    </div>
-  </div>
-
-</div>
+  <div class="finish"><b>Gotowe.</b> Jeśli masz więcej czasu, zrób zamiast tego krótki spacer. W ciągu dnia dobrze jest też wstać od komputera choć na 1–2 minuty mniej więcej co godzinę.</div>
+  <div class="warning">Przerwij, jeśli pojawi się ostry ból, drętwienie albo zawroty głowy. Przy urazie lub przewlekłych dolegliwościach dobór ćwiczeń skonsultuj z fizjoterapeutą lub lekarzem.</div>
+</main>
 </body>
 </html>
