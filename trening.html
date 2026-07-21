@@ -38,6 +38,14 @@
   .ex-sets{ font-family:var(--font-mono); font-size:11.5px; color:var(--sage); white-space:nowrap; }
   .ex-desc{ font-size:13px; color:var(--text-muted); line-height:1.5; }
   .ex-prog{ font-size:11.5px; color:var(--gold); margin-top:6px; }
+  .form-guide{ margin-top:10px; border-top:1px solid var(--line); padding-top:9px; }
+  .form-guide summary{ cursor:pointer; color:var(--gold); font-family:var(--font-mono); font-size:11.5px; user-select:none; }
+  .form-guide ol{ margin:10px 0 8px; padding-left:19px; color:var(--text-muted); font-size:12.5px; line-height:1.55; }
+  .form-guide li{ margin-bottom:5px; }
+  .form-tip{ font-size:12px; line-height:1.5; color:var(--text-muted); margin-top:6px; }
+  .form-tip b{ color:var(--text); }
+  .video-link{ display:inline-block; margin-top:9px; color:var(--sage); font-family:var(--font-mono); font-size:11.5px; text-decoration:none; }
+  .video-link:hover{ text-decoration:underline; }
 
   .principle{ display:flex; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
   .principle .pnum{ font-family:var(--font-mono); color:var(--gold); font-weight:700; flex-shrink:0; }
@@ -252,6 +260,96 @@ const API = '/api/baza-data';
 const API_PASSWORD = '5855';
 let DATA = {};
 
+const EXERCISE_GUIDES = {
+  'Pompki klasyczne': {
+    steps:['Dłonie ustaw trochę szerzej niż barki, palce skieruj do przodu.','Napnij brzuch i pośladki; głowa, plecy i nogi tworzą jedną linię.','Zginaj łokcie pod kątem około 30–45° od tułowia i opuszczaj klatkę między dłonie.','Odepchnij podłogę bez zapadania bioder i bez wysuwania głowy.'],
+    tip:'Łatwiej: oprzyj dłonie o stabilny blat lub ścianę. Błąd: łokcie szeroko na boki.', video:'pompki klasyczne poprawna technika'
+  },
+  'Pompki diamentowe': {
+    steps:['Zacznij w podporze; dłonie ustaw blisko pod mostkiem, nie muszą tworzyć idealnego diamentu.','Napnij całe ciało i trzymaj łokcie blisko boków.','Opuszczaj klatkę w stronę dłoni tylko tak nisko, jak pozwalają nadgarstki i barki.','Wyprostuj ramiona, nie wypychając barków do uszu.'],
+    tip:'Łatwiej: wykonuj o blacie albo z kolan. Jeśli bolą nadgarstki lub barki, wróć do wąskich pompek.', video:'diamond push up proper form'
+  },
+  'Pompki pike': {
+    steps:['Ustaw dłonie na szerokość barków i unieś biodra, tworząc odwróconą literę V.','Patrz między stopy; brzuch pozostaje napięty.','Zginaj łokcie lekko do tyłu i kieruj czubek głowy przed linię dłoni.','Odepchnij podłogę i wróć do pełnego wyprostu ramion.'],
+    tip:'Łatwiej: ustaw stopy dalej od dłoni i zmniejsz pochylenie. Nie uderzaj głową o podłogę.', video:'pike push up proper form'
+  },
+  'Dipy na krześle/stole': {
+    steps:['Użyj ciężkiego, stabilnego krzesła opartego o ścianę; sprawdź je przed serią.','Dłonie oprzyj obok bioder, barki cofnij, stopy ustaw blisko.','Ugnij łokcie do komfortowego zakresu, trzymając biodra blisko krawędzi.','Wyprostuj ręce bez gwałtownego blokowania łokci.'],
+    tip:'Łatwiej i często wygodniej dla barków: wąskie pompki o blacie. Nie schodź głęboko, jeśli czujesz przód barku.', video:'chair dips proper form safe'
+  },
+  'Plank-to-pushup': {
+    steps:['Zacznij w desce na przedramionach, łokcie pod barkami.','Postaw jedną dłoń pod barkiem, potem drugą i przejdź do podporu wysokiego.','Wróć kolejno na przedramiona. Przy następnym powtórzeniu zacznij drugą ręką.','Trzymaj biodra możliwie nieruchomo i oddychaj.'],
+    tip:'Łatwiej: oprzyj kolana na podłodze. Rozstaw szerzej stopy, jeśli biodra mocno kołyszą się na boki.', video:'plank to push up proper form'
+  },
+  'Wiosłowanie pod stołem': {
+    steps:['Najpierw mocno sprawdź stół: nie może się chwiać, przesuwać ani przewrócić.','Połóż się pod nim, chwyć stabilną krawędź i ustaw ciało w jednej linii.','Ściągnij łopatki w dół i do siebie, następnie przyciągnij klatkę do krawędzi.','Opuść ciało powoli aż do wyprostu ramion.'],
+    tip:'Nie rób na lekkim, szklanym ani rozkładanym stole. Łatwiej: ugnij kolana i postaw całe stopy na podłodze.', video:'inverted row under table proper form'
+  },
+  'Superman': {
+    steps:['Połóż się na brzuchu, czoło skieruj do podłogi, ręce wyciągnij przed siebie.','Lekko napnij brzuch i pośladki.','Unieś ręce i nogi tylko kilka centymetrów, bez zadzierania głowy.','Zatrzymaj na 1–2 sekundy i powoli opuść.'],
+    tip:'Ruch ma być mały i kontrolowany. Jeśli boli odcinek lędźwiowy, unoś naprzemiennie przeciwną rękę i nogę.', video:'superman exercise proper form'
+  },
+  'Doorway row (jeśli masz uchwyt w futrynie)': {
+    steps:['Użyj wyłącznie solidnej, nieruchomej futryny lub uchwytu i sprawdź chwyt przed serią.','Stań blisko, chwyć obiema rękami i odchyl proste ciało do tyłu.','Zacznij ruch od ściągnięcia łopatek, potem przyciągnij klatkę do dłoni.','Wyprostuj ręce powoli, zachowując napięty brzuch.'],
+    tip:'Nie używaj klamki ani niestabilnych drzwi. Im bardziej pionowo stoisz, tym ćwiczenie jest łatwiejsze.', video:'door frame row bodyweight proper form'
+  },
+  'Retraction barków (bez obciążenia)': {
+    steps:['Stań wysoko, ręce rozluźnij, a brodę lekko cofnij.','Bez unoszenia barków przesuń łopatki delikatnie w dół i do siebie.','Zatrzymaj na 2 sekundy, nie wypychając żeber.','Rozluźnij i powtórz; ruch powinien być niewielki.'],
+    tip:'Nie ściskaj łopatek maksymalnie i nie unoś barków. Dobre ćwiczenie po siedzeniu przy komputerze.', video:'scapular retraction standing exercise'
+  },
+  'Przysiady': {
+    steps:['Stopy ustaw mniej więcej na szerokość barków, palce lekko na zewnątrz.','Napnij brzuch i rozpocznij ruch jednoczesnym cofnięciem bioder oraz ugięciem kolan.','Kolana prowadź w kierunku palców stóp, ciężar rozłóż na całych stopach.','Zejdź do wygodnej głębokości i wstań, naciskając podłogę stopami.'],
+    tip:'Łatwiej: siadaj kontrolowanie na krześle i wstawaj. Pięty nie powinny odrywać się od podłogi.', video:'przysiad poprawna technika'
+  },
+  'Przysiad bułgarski': {
+    steps:['Stań około krok przed stabilnym krzesłem i oprzyj na nim grzbiet tylnej stopy.','Większość ciężaru trzymaj na przedniej nodze; biodra skieruj do przodu.','Opuszczaj biodra pionowo, a przednie kolano prowadź zgodnie z kierunkiem palców.','Odepchnij się całą przednią stopą i wróć do góry.'],
+    tip:'Zacznij bez krzesła od zwykłego wykroku w miejscu. Trzymaj się ściany, jeśli tracisz równowagę.', video:'bulgarian split squat proper form bodyweight'
+  },
+  'Pistol squat (progresja)': {
+    steps:['Stań przy futrynie lub stabilnym słupku i chwyć go dla asekuracji.','Przenieś ciężar na jedną stopę, drugą nogę wysuń przed siebie.','Cofaj biodra i schodź tylko do głębokości, z której wrócisz bez zapadania kolana.','Wstań, prowadząc kolano w linii z palcami stopy.'],
+    tip:'To ćwiczenie zaawansowane. Najpierw opanuj przysiad na krześle na jednej nodze; nie wymuszaj pełnej głębokości.', video:'assisted pistol squat progression proper form'
+  },
+  'Wykroki chodzone': {
+    steps:['Stań prosto i zrób kontrolowany krok do przodu.','Opuść biodra pionowo, aż oba kolana będą komfortowo ugięte.','Przednie kolano prowadź nad stopą, tułów trzymaj wysoki.','Odepchnij się przednią stopą i przejdź płynnie do kolejnego kroku.'],
+    tip:'Gdy brakuje miejsca lub równowagi, rób wykroki naprzemienne w miejscu.', video:'walking lunges proper form'
+  },
+  'Wspięcia na palce': {
+    steps:['Stań przy ścianie dla równowagi, stopy ustaw równolegle.','Unieś pięty możliwie wysoko, naciskając podłogę dużymi palcami.','Zatrzymaj ruch na sekundę.','Opuść pięty powoli i bez odbijania.'],
+    tip:'Najpierw ćwicz na płaskiej podłodze. Krawędź schodka stosuj dopiero przy dobrej kontroli i podparciu.', video:'standing calf raise proper form bodyweight'
+  },
+  'Plank': {
+    steps:['Oprzyj przedramiona o podłogę, łokcie ustaw dokładnie pod barkami.','Wyprostuj nogi i zaprzyj palce stóp; lekko podwiń miednicę.','Napnij brzuch i pośladki, utrzymując linię od głowy do pięt.','Oddychaj spokojnie i zakończ serię, zanim biodra zaczną opadać.'],
+    tip:'Łatwiej: oprzyj kolana. Jakość pozycji jest ważniejsza niż długość utrzymania.', video:'plank proper form'
+  },
+  'Boczny plank': {
+    steps:['Połóż się bokiem, łokieć ustaw pod barkiem.','Ugnij kolana dla łatwej wersji albo wyprostuj nogi i ustaw stopy jedna na drugiej.','Unieś biodra, tworząc prostą linię od głowy do stóp lub kolan.','Nie obracaj klatki w stronę podłogi; oddychaj swobodnie.'],
+    tip:'Jeśli bark jest niekomfortowy, wybierz wersję z kolan i krótsze utrzymanie.', video:'side plank proper form'
+  },
+  'Nożyce': {
+    steps:['Połóż się na plecach i dociśnij dolną część pleców do podłogi.','Unieś wyprostowane nogi tylko na wysokość, przy której plecy nadal nie odrywają się.','Poruszaj nogami naprzemiennie małym, kontrolowanym ruchem.','Oddychaj; jeśli plecy się unoszą, podnieś nogi wyżej albo ugnij kolana.'],
+    tip:'Nie wkładaj dłoni pod odcinek lędźwiowy jako sposobu na ignorowanie utraty kontroli brzucha.', video:'flutter kicks proper form core'
+  },
+  'Mountain climbers': {
+    steps:['Ustaw wysoki podpór: dłonie pod barkami, nogi wyprostowane.','Napnij brzuch i przyciągnij jedno kolano w stronę klatki.','Cofnij nogę i zmień stronę bez unoszenia bioder.','Najpierw ćwicz powoli; przyspieszaj tylko przy stabilnym tułowiu.'],
+    tip:'Łatwiej: oprzyj dłonie o stabilny blat. Szybkość nie może psuć pozycji pleców.', video:'mountain climbers proper form'
+  }
+};
+
+function addFormGuide(card, name){
+  const guide = EXERCISE_GUIDES[name];
+  if(!guide) return;
+  const details = document.createElement('details');
+  details.className = 'form-guide';
+  const videoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(guide.video)}`;
+  details.innerHTML = `
+    <summary>Jak wykonać — instrukcja i film</summary>
+    <ol>${guide.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+    <div class="form-tip"><b>Ułatwienie / uwaga:</b> ${escapeHtml(guide.tip)}</div>
+    <a class="video-link" href="${videoUrl}" target="_blank" rel="noopener">▶ Zobacz demonstracje na YouTube</a>
+  `;
+  card.appendChild(details);
+}
+
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 async function loadData(){
@@ -317,6 +415,8 @@ function initExerciseLogs(){
     const nameEl = card.querySelector('.ex-name');
     if(!nameEl) return;
     const name = nameEl.textContent.trim();
+
+    addFormGuide(card, name);
 
     const logBox = document.createElement('div');
     logBox.className = 'log-box';
