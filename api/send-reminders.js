@@ -1,5 +1,6 @@
 const webpush = require('web-push');
 const store = require('./_supabase-store');
+const { runCloudAutomation } = require('./_debrain-automation-core');
 
 const HABITS = [
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
@@ -54,6 +55,10 @@ module.exports = async function handler(req, res) {
   if (!period) {
     res.status(400).json({ error: 'Nieznany period' });
     return;
+  }
+  const automationType = periodParam === 'rano' ? 'morning' : periodParam === 'wieczor' ? 'evening' : null;
+  if (automationType) {
+    await runCloudAutomation(req.headers.host || 'decz.pl', automationType).catch(() => {});
   }
   const BIN_ID = process.env.JSONBIN_BIN_ID;
   const API_KEY = process.env.JSONBIN_API_KEY;

@@ -1,5 +1,6 @@
 const { Resend } = require('resend');
 const store = require('./_supabase-store');
+const { runCloudAutomation } = require('./_debrain-automation-core');
 
 const HABITS = [
   { id:'h1', period:'Rano', text:'Bez telefonu pierwsze 20-30 min' },
@@ -50,6 +51,7 @@ module.exports = async function handler(req, res) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
+    await runCloudAutomation(req.headers.host || 'decz.pl', 'weekly').catch(() => {});
     const { record: data } = await store.getLatest();
     const history = data.habitHistory || {};
 
