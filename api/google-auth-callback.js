@@ -32,7 +32,8 @@ module.exports = async function handler(req, res) {
 
     // Zapisz refresh_token w tym samym miejscu co reszta danych Bazy
     await store.mutateRecord((data) => {
-      data.googleRefreshToken = tokens.refresh_token;
+      if (req.query.state === 'werboard') data.werboardCalendar = { ...(data.werboardCalendar || {}), refreshToken: tokens.refresh_token, calendarId: data.werboardCalendar?.calendarId || 'primary' };
+      else data.googleRefreshToken = tokens.refresh_token;
     });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
