@@ -4,5 +4,15 @@
     { "path": "/api/send-reminders?period=dzien", "schedule": "0 12 * * *" },
     { "path": "/api/send-reminders?period=wieczor", "schedule": "30 18 * * *" },
     { "path": "/api/weekly-summary", "schedule": "0 18 * * 0" }
+  ],
+  "rewrites": [
+    { "source": "/api/debrain/status", "destination": "/api/[...route]?route=debrain/status" },
+    { "source": "/api/habit-state", "destination": "/api/[...route]?route=habit-state" },
+    { "source": "/api/board/:collection", "destination": "/api/[...route]?route=board/:collection" },
+    { "source": "/api/board/:collection/items", "destination": "/api/[...route]?route=board/:collection/items" },
+    { "source": "/api/graph", "destination": "/api/[...route]?route=graph" },
+    { "source": "/api/graph/:rest*", "destination": "/api/[...route]?route=graph/:rest*" },
+    { "source": "/api/automations", "destination": "/api/[...route]?route=automations" },
+    { "source": "/api/automations/:rest*", "destination": "/api/[...route]?route=automations/:rest*" }
   ]
 }

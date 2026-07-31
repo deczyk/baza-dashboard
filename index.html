@@ -1,115 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Baza</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#14181B">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
-  --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
-  --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
-  --font-sans:'Inter', -apple-system, system-ui, sans-serif;
-}
-*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); height:100%;}
-body{ -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
-
-#gate{
-  position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:18px; z-index:100;
-}
-#gate .mark{ font-family:var(--font-mono); color:var(--gold); font-size:12px; letter-spacing:.25em; text-transform:uppercase; }
-#gate input{
-  background:var(--surface); border:1px solid var(--line); color:var(--text);
-  font-family:var(--font-mono); font-size:20px; letter-spacing:.3em; text-align:center;
-  padding:14px 18px; border-radius:8px; width:200px; outline:none;
-}
-#gate input:focus{ border-color:var(--gold); }
-#gate .err{ color:var(--danger); font-size:12px; font-family:var(--font-mono); height:14px; }
-#gate button{
-  background:var(--gold); color:#14181B; border:none; border-radius:8px; padding:12px 22px;
-  font-family:var(--font-mono); font-weight:600; letter-spacing:.1em; text-transform:uppercase; font-size:12px;
-  cursor:pointer;
-}
-
-#chooser{
-  display:none; position:fixed; inset:0; background:var(--bg); flex-direction:column;
-  align-items:center; justify-content:center; gap:28px; z-index:90; padding:20px;
-}
-#chooser.visible{ display:flex; }
-#chooser .mark{ font-family:var(--font-mono); color:var(--text-muted); font-size:12px; letter-spacing:.25em; text-transform:uppercase; }
-.choices{ display:flex; gap:16px; flex-wrap:wrap; justify-content:center; max-width:420px; }
-.choice-tile{
-  background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:32px 26px;
-  display:flex; flex-direction:column; align-items:center; gap:12px; text-decoration:none; color:var(--text);
-  width:160px; cursor:pointer; transition:transform .15s ease, border-color .15s ease;
-}
-.choice-tile:active{ transform:scale(.96); }
-.choice-tile:hover{ border-color:var(--gold); }
-.choice-tile .glyph{
-  width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px;
-}
-.choice-tile.baza .glyph{ background:rgba(201,168,118,0.16); color:var(--gold); }
-.choice-tile.debrain .glyph{ background:rgba(107,156,137,0.16); color:var(--sage); }
-.choice-tile .lbl{ font-size:15px; font-weight:600; }
-.choice-tile .sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; text-align:center; }
-</style>
-</head>
-<body>
-
-<div id="gate">
-  <div class="mark">◆ BAZA — DOSTĘP</div>
-  <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
-  <div class="err" id="gateErr"></div>
-  <button onclick="tryUnlock()">Odblokuj</button>
-</div>
-
-<div id="chooser">
-  <div class="mark">◆ Wybierz</div>
-  <div class="choices">
-    <a class="choice-tile baza" href="baza.html">
-      <div class="glyph">🗂️</div>
-      <div class="lbl">Baza</div>
-      <div class="sub">Dashboard / nawyki</div>
-    </a>
-    <a class="choice-tile debrain" href="debrain.html">
-      <div class="glyph">🧠</div>
-      <div class="lbl">Debrain</div>
-      <div class="sub">Agent AI</div>
-    </a>
-  </div>
-</div>
-
-<script>
-const CONFIG = { PIN: "5855" };
-
-function tryUnlock(){
-  const val = document.getElementById('pinInput').value;
-  if(val === CONFIG.PIN){
-    sessionStorage.setItem('baza_unlocked','1');
-    document.getElementById('gate').style.display='none';
-    document.getElementById('chooser').classList.add('visible');
-  } else {
-    document.getElementById('gateErr').textContent = 'Zły PIN';
-    document.getElementById('pinInput').value='';
-  }
-}
-document.getElementById('pinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
-
-if(sessionStorage.getItem('baza_unlocked')==='1'){
-  document.getElementById('gate').style.display='none';
-  document.getElementById('chooser').classList.add('visible');
-}
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f0d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Debrain" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <title>Debrain</title>
+    <script type="module" crossorigin src="/assets/index-zQ5PzYAo.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CgJAZTea.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

@@ -1,0 +1,21 @@
+[
+  {"id":"h1","group":"Rano","name":"Bez telefonu pierwsze 20–30 min","time":"07:00"},
+  {"id":"h2","group":"Rano","name":"Szklanka wody po przebudzeniu","time":"07:05"},
+  {"id":"h4","group":"Rano","name":"Zaściel łóżko","time":"07:10"},
+  {"id":"h7","group":"Rano","name":"Rozciąganie klatki i pleców — 2 min","time":"07:35","guide":"/poradnik-rozciaganie.html"},
+  {"id":"h8","group":"Rano","name":"10 pompek Tysona lub łatwiejszy wariant","time":"07:40"},
+  {"id":"h3","group":"Rano","name":"Mycie twarzy i zębów","time":"po śniadaniu"},
+  {"id":"h11","group":"W ciągu dnia","name":"Wypij ustaloną ilość wody do południa","time":"do 12:00"},
+  {"id":"h18","group":"W ciągu dnia","name":"Trening — Push/Pull/Nogi","time":"18:00","days":[1,2,3,5,6],"guide":"/trening.html"},
+  {"id":"h20","group":"W ciągu dnia","name":"5 minut porządków przy biurku","time":"17:30"},
+  {"id":"h37","group":"W ciągu dnia","name":"Dawka leku","time":"18:30"},
+  {"id":"h39","group":"Wieczorem","name":"Czytanie lub nauka","time":"19:00"},
+  {"id":"h26","group":"Wieczorem","name":"Plan jutra: 2 priorytety i przygotowanie rzeczy","time":"21:00"},
+  {"id":"h38","group":"Wieczorem","name":"Dawka leku","time":"21:30"},
+  {"id":"h25","group":"Wieczorem","name":"Spokojne rozciąganie — 3–5 min","time":"21:40","guide":"/poradnik-rozciaganie.html"},
+  {"id":"h27","group":"Wieczorem","name":"Dziennik — 3 krótkie zdania","time":"21:50"},
+  {"id":"h24","group":"Wieczorem","name":"Odłóż telefon przed snem","time":"22:00"},
+  {"id":"h23","group":"Wieczorem","name":"Mycie twarzy i zębów","time":"22:10"},
+  {"id":"h29","group":"Wieczorem","name":"Połóż się o ustalonej porze","time":"23:00"},
+  {"id":"h32","group":"Sport","name":"Krótki spacer","time":"minimum 10 min"}
+]

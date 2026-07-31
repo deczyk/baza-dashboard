@@ -1,0 +1,12 @@
+{
+  "name": "Werboard",
+  "short_name": "Werboard",
+  "description": "Twój spokojny, codzienny organizer.",
+  "start_url": "/#/werboard",
+  "display": "standalone",
+  "background_color": "#fffaf7",
+  "theme_color": "#f4abc4",
+  "icons": [
+    { "src": "/werboard-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

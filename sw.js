@@ -1,31 +1,47 @@
-self.addEventListener('push', function(event) {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch(e) {}
+// Service worker Deczboarda - jedyny cel: odbierać Web Push z serwera i
+// pokazywać go jako natywne powiadomienie systemowe, nawet gdy karta/apka
+// nie jest aktywna na pierwszym planie. Bez tego telefon (i komputer, gdy
+// okno nie jest w fokusie) nigdy by nie zobaczył powiadomienia.
 
-  const title = data.title || 'Baza — przypomnienie';
-  const options = {
-    body: data.body || 'Masz nawyki do zrobienia.',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
-    tag: data.tag || 'baza-habits',
-    renotify: true,
-    data: { url: data.url || '/' }
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Deczboard', body: 'Masz nowe powiadomienie.' };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    if (event.data) payload.body = event.data.text();
+  }
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-      for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      tag: payload.tag || 'deczboard',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // silent: true - bez dźwięku/wibracji (np. subtelne "Debrain odpowiedział"), zamiast
+      // traktować każde powiadomienie tak samo alarmująco jak np. przypomnienie o nawykach.
+      silent: payload.silent === true,
+      data: { url: '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
       }
-      if (clients.openWindow) return clients.openWindow(url);
-    })
+      if (self.clients.openWindow) return self.clients.openWindow('/');
+      return undefined;
+    }),
   );
 });

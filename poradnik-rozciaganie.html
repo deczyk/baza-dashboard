@@ -1,122 +1,57 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Poranne rozciąganie — 5 minut</title>
-<style>
-  :root{
-    --bg:#14181B; --surface:#1C2226; --surface-2:#242B30; --line:#2E363C;
-    --gold:#C9A876; --sage:#6B9C89; --text:#E8E4DB; --text-muted:#848D93; --danger:#B4664F;
-    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
-    --font-sans:'Inter', -apple-system, system-ui, sans-serif;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); -webkit-font-smoothing:antialiased;}
-  .wrap{max-width:680px; margin:0 auto; padding:32px 20px 80px;}
-  .eyebrow{font-family:var(--font-mono); color:var(--gold); font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:8px;}
-  h1{font-size:28px; margin:0 0 8px;}
-  .subtitle{font-size:14px; color:var(--text-muted); margin-bottom:24px; line-height:1.5;}
-  .intro{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:28px; font-size:14.5px; line-height:1.6;}
-  .intro b{color:var(--gold);}
-  .rules{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
-  .rule-pill{font-family:var(--font-mono); font-size:11px; background:var(--surface-2); border:1px solid var(--line); border-radius:20px; padding:5px 12px; color:var(--text-muted);}
-  h2{font-size:12px; font-family:var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin:34px 0 12px;}
-  .stretch-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 20px; margin-bottom:12px; display:grid; grid-template-columns:74px 1fr; gap:16px; align-items:start;}
-  .time{font-family:var(--font-mono); font-size:12px; color:var(--sage); background:rgba(107,156,137,.12); border-radius:10px; padding:9px 7px; text-align:center; white-space:nowrap;}
-  .stretch-card h3{margin:1px 0 7px; font-size:16px; color:var(--text);}
-  .stretch-card p{margin:0; font-size:13.5px; line-height:1.55; color:var(--text-muted);}
-  .side{display:inline-block; margin-top:8px; font-family:var(--font-mono); font-size:11px; color:var(--gold);}
-  .finish{margin-top:22px; padding:16px 18px; border-left:3px solid var(--sage); background:var(--surface); border-radius:0 12px 12px 0; font-size:13.5px; line-height:1.55; color:var(--text-muted);}
-  .warning{margin-top:24px; font-size:12px; line-height:1.5; color:var(--text-muted);}
-  @media(max-width:480px){
-    .wrap{padding:24px 14px 60px;}
-    .stretch-card{grid-template-columns:62px 1fr; padding:15px 14px; gap:12px;}
-    h1{font-size:24px;}
-    .time{font-size:10px; padding:8px 4px;}
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#14181B">
+  <title>Poranne rozciąganie - 5 minut</title>
+  <style>
+    :root{--bg:#14181b;--card:#1c2226;--card2:#242b30;--line:#334047;--gold:#c9a876;--sage:#6b9c89;--text:#f1eee7;--muted:#a3abb0}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 Inter,system-ui,sans-serif}
+    main{max-width:720px;margin:auto;padding:32px 18px 72px}.eyebrow{color:var(--gold);font:700 11px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}
+    h1{font-size:clamp(28px,7vw,40px);line-height:1.08;margin:10px 0}.lead{color:var(--muted);margin:0 0 24px}
+    .timer{position:sticky;top:12px;z-index:2;background:linear-gradient(135deg,#263238,#1c2226);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:24px;box-shadow:0 12px 32px #0004}
+    .timer-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.step{color:var(--gold);font:700 12px/1.2 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em}.clock{font:700 40px/1 ui-monospace,monospace;letter-spacing:-.05em}
+    .progress{height:7px;background:#101416;border-radius:99px;overflow:hidden;margin:16px 0}.progress i{display:block;width:0;height:100%;background:var(--sage);transition:width .25s linear}
+    .controls{display:flex;gap:9px}.btn{border:0;border-radius:10px;padding:10px 15px;font-weight:800;cursor:pointer;font-size:14px}.primary{background:var(--gold);color:#1a1916}.secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+    .note,.finish{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;color:var(--muted);margin:20px 0}.note b,.finish b{color:var(--text)}
+    h2{margin:30px 0 12px;color:var(--muted);font:700 12px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}
+    .item{display:grid;grid-template-columns:76px 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:17px;margin:10px 0;transition:.2s}.item.active{border-color:var(--gold);box-shadow:0 0 0 1px #c9a87644;background:#252824}.time{color:var(--sage);font:700 12px/1.2 ui-monospace,monospace;padding-top:3px}.item h3{font-size:17px;margin:0 0 6px}.item p{margin:0;color:var(--muted);font-size:14px}.tag{display:inline-block;color:var(--gold);font:700 11px/1 ui-monospace,monospace;margin-top:9px}
+    @media(max-width:480px){main{padding:24px 14px 54px}.clock{font-size:34px}.item{grid-template-columns:62px 1fr;padding:14px}.controls .btn{flex:1}}
+  </style>
 </head>
 <body>
-<main class="wrap">
-  <div class="eyebrow">◆ Poranny reset</div>
-  <h1>5 minut rozciągania</h1>
-  <div class="subtitle">Prosta rutyna całego ciała dla osoby, która dużo siedzi przy komputerze. Bez maty, sprzętu i stroju sportowego.</div>
+  <main>
+    <div class="eyebrow">Poranny reset</div>
+    <h1>5 minut rozciągania</h1>
+    <p class="lead">Prosta rutyna całego ciała po przebudzeniu. Bez maty, sprzętu i stroju sportowego.</p>
 
-  <div class="intro">
-    Włącz minutnik na <b>5:00</b> i wykonuj ruchy po kolei. To ma być łagodne rozruszanie, nie trening — oddychaj swobodnie i rozciągaj tylko do uczucia lekkiego napięcia.
-    <div class="rules">
-      <span class="rule-pill">Bez szarpania</span>
-      <span class="rule-pill">Bez bólu</span>
-      <span class="rule-pill">Spokojny oddech</span>
-      <span class="rule-pill">Codziennie rano</span>
-    </div>
-  </div>
+    <section class="timer" aria-live="polite">
+      <div class="timer-top"><span class="step" id="step">Gotowy do startu</span><strong class="clock" id="clock">5:00</strong></div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="controls"><button class="btn primary" id="start">Start</button><button class="btn secondary" id="reset">Reset</button></div>
+    </section>
 
-  <h2>Rutyna — dokładnie 5 minut</h2>
+    <div class="note"><b>Zasada:</b> rozciągaj się tylko do lekkiego napięcia. Bez szarpania, bez bólu, ze spokojnym oddechem.</div>
+    <h2>Rutyna - dokładnie 5 minut</h2>
 
-  <section class="stretch-card">
-    <div class="time">0:00–0:40</div>
-    <div>
-      <h3>Marsz i krążenia barków</h3>
-      <p>Maszeruj spokojnie w miejscu. Jednocześnie zataczaj barkami duże koła: najpierw do tyłu, potem do przodu. Rozluźnij ręce i szczękę.</p>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">0:40–1:20</div>
-    <div>
-      <h3>Kark i szyja</h3>
-      <p>Stań prosto. Opuść prawe ucho w stronę prawego barku, bez unoszenia barku. Nie ciągnij głowy ręką. Zmień stronę po 20 sekundach.</p>
-      <span class="side">20 sek. na stronę</span>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">1:20–2:00</div>
-    <div>
-      <h3>Klatka piersiowa i ramiona</h3>
-      <p>Spleć dłonie za plecami albo oprzyj przedramiona o futrynę. Cofnij barki, lekko unieś mostek i patrz przed siebie. Nie wyginaj dolnych pleców.</p>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">2:00–2:50</div>
-    <div>
-      <h3>Boki i górna część pleców</h3>
-      <p>Unieś ręce nad głowę i pochyl tułów lekko w bok. Po 15 sekundach zmień stronę. Na koniec wyciągnij obie ręce przed siebie, zaokrąglij górę pleców i rozsuń łopatki.</p>
-      <span class="side">15 sek. lewo · 15 sek. prawo · 20 sek. plecy</span>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">2:50–3:50</div>
-    <div>
-      <h3>Zginacze bioder</h3>
-      <p>Zrób mały wykrok. Tylna noga zostaje prosta, pięta może się unieść. Podwiń lekko miednicę i przesuń biodra do przodu, aż poczujesz przód biodra tylnej nogi.</p>
-      <span class="side">30 sek. na stronę</span>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">3:50–4:30</div>
-    <div>
-      <h3>Tył nóg</h3>
-      <p>Postaw jedną piętę trochę przed sobą, palce skieruj do góry. Ugnij drugą nogę i pochyl prosty tułów lekko do przodu. Zmień nogę po 20 sekundach.</p>
-      <span class="side">20 sek. na stronę</span>
-    </div>
-  </section>
-
-  <section class="stretch-card">
-    <div class="time">4:30–5:00</div>
-    <div>
-      <h3>Wyprost i spokojny oddech</h3>
-      <p>Stań wygodnie. Z wdechem unieś ręce, wyciągnij całe ciało w górę. Z wydechem opuść ręce i barki. Powtórz powoli 3–4 razy.</p>
-    </div>
-  </section>
-
-  <div class="finish"><b>Gotowe.</b> Jeśli masz więcej czasu, zrób zamiast tego krótki spacer. W ciągu dnia dobrze jest też wstać od komputera choć na 1–2 minuty mniej więcej co godzinę.</div>
-  <div class="warning">Przerwij, jeśli pojawi się ostry ból, drętwienie albo zawroty głowy. Przy urazie lub przewlekłych dolegliwościach dobór ćwiczeń skonsultuj z fizjoterapeutą lub lekarzem.</div>
-</main>
+    <article class="item" data-start="0" data-end="40"><div class="time">0:00-0:40</div><div><h3>Marsz i krążenia barków</h3><p>Maszeruj spokojnie w miejscu. Zataczaj barkami duże koła: najpierw do tyłu, potem do przodu.</p></div></article>
+    <article class="item" data-start="40" data-end="80"><div class="time">0:40-1:20</div><div><h3>Kark i szyja</h3><p>Opuść ucho w stronę barku, nie unoś barku i nie ciągnij głowy ręką.</p><span class="tag">20 sek. na stronę</span></div></article>
+    <article class="item" data-start="80" data-end="120"><div class="time">1:20-2:00</div><div><h3>Klatka piersiowa i ramiona</h3><p>Spleć dłonie za plecami albo oprzyj przedramiona o futrynę. Cofnij barki i lekko unieś mostek.</p></div></article>
+    <article class="item" data-start="120" data-end="170"><div class="time">2:00-2:50</div><div><h3>Boki i górna część pleców</h3><p>Unieś ręce i pochyl tułów lekko w bok. Potem wyciągnij ręce przed siebie i rozsuń łopatki.</p><span class="tag">15 sek. lewo, 15 sek. prawo, 20 sek. plecy</span></div></article>
+    <article class="item" data-start="170" data-end="230"><div class="time">2:50-3:50</div><div><h3>Zginacze bioder</h3><p>Zrób mały wykrok, podwiń lekko miednicę i przesuń biodra do przodu.</p><span class="tag">30 sek. na stronę</span></div></article>
+    <article class="item" data-start="230" data-end="270"><div class="time">3:50-4:30</div><div><h3>Tył nóg</h3><p>Postaw piętę przed sobą, palce do góry. Ugnij drugą nogę i pochyl prosty tułów lekko do przodu.</p><span class="tag">20 sek. na stronę</span></div></article>
+    <article class="item" data-start="270" data-end="300"><div class="time">4:30-5:00</div><div><h3>Wyprost i spokojny oddech</h3><p>Z wdechem unieś ręce i wyciągnij całe ciało, z wydechem opuść barki.</p></div></article>
+    <div class="finish"><b>Gotowe.</b> Jeśli pojawi się ostry ból, drętwienie albo zawroty głowy - przerwij.</div>
+  </main>
+  <script>
+    const total=300, clock=document.querySelector('#clock'), step=document.querySelector('#step'), bar=document.querySelector('#bar'), start=document.querySelector('#start'), reset=document.querySelector('#reset'), items=[...document.querySelectorAll('.item')];
+    let elapsed=0, running=false, startedAt=0, timer=null;
+    const format=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+    function render(){const left=Math.max(0,total-elapsed), active=items.find(x=>elapsed>=+x.dataset.start&&elapsed<+x.dataset.end);clock.textContent=format(left);bar.style.width=`${elapsed/total*100}%`;items.forEach(x=>x.classList.toggle('active',x===active));step.textContent=elapsed>=total?'Gotowe - świetna robota':active?active.querySelector('h3').textContent:'Gotowy do startu'}
+    function tick(){elapsed=Math.min(total,Math.floor((Date.now()-startedAt)/1000));render();if(elapsed>=total){clearInterval(timer);running=false;start.textContent='Jeszcze raz';try{navigator.vibrate?.([100,60,100])}catch{}}}
+    start.onclick=()=>{if(elapsed>=total)elapsed=0;if(running){elapsed=Math.floor((Date.now()-startedAt)/1000);clearInterval(timer);running=false;start.textContent='Wznów'}else{startedAt=Date.now()-elapsed*1000;timer=setInterval(tick,250);running=true;start.textContent='Pauza';tick()}};
+    reset.onclick=()=>{clearInterval(timer);elapsed=0;running=false;start.textContent='Start';render()};render();
+  </script>
 </body>
 </html>

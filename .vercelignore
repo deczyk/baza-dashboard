@@ -1,0 +1,3 @@
+# Stary, lokalny prototyp Flask. Nie jest częścią strony ani API na decz.pl,
+# a jego pominięcie zwalnia limit funkcji Vercel dla wspólnego API Debraina.
+api/gui_app.py

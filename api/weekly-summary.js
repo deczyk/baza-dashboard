@@ -51,8 +51,10 @@ module.exports = async function handler(req, res) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
-    await runCloudAutomation(req.headers.host || 'decz.pl', 'weekly').catch(() => {});
     const { record: data } = await store.getLatest();
+    if (data.debrainAutomationSettings?.weekly !== false) {
+      await runCloudAutomation(req.headers.host || 'decz.pl', 'weekly').catch(() => {});
+    }
     const history = data.habitHistory || {};
 
     // Ostatnie 7 dni (łącznie z dziś)

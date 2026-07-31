@@ -1,0 +1,38 @@
+{
+  "location": {
+    "name": "Tarnowskie Góry",
+    "latitude": 50.4455,
+    "longitude": 18.8615
+  },
+  "dates": {
+    "companyRegistration": "2025-01-01"
+  },
+  "goals": {
+    "waterMl": 2000,
+    "calories": 2500
+  },
+  "refreshMs": {
+    "system": 5000,
+    "currency": 900000,
+    "weather": 1800000,
+    "activity": 60000,
+    "spotify": 5000,
+    "mail": 300000
+  },
+  "api": {
+    "currency": "https://api.nbp.pl/api/exchangerates/rates/A/EUR/?format=json",
+    "weather": "https://api.open-meteo.com/v1/forecast",
+    "debrainUpstream": "https://decz.pl/api/chat",
+    "debrainChatPath": "/api/chat",
+    "debrainStatusPath": "/api/debrain-health"
+  },
+  "MAIL_WEBMAIL_URL": "https://mail.google.com",
+  "links": {
+    "drive": "https://drive.google.com",
+    "panel": "https://www.sklepzastodola.pl/panel.html",
+    "debrain": "https://decz.pl",
+    "knowledgeGraph": "https://decz.pl",
+    "whatsapp": "https://web.whatsapp.com",
+    "messenger": "https://www.messenger.com"
+  }
+}

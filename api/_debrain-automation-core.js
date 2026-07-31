@@ -13,6 +13,10 @@ const AUTOMATIONS = {
     name: "Tygodniowy przegląd",
     prompt: "To automatyczny tygodniowy przegląd. Przygotuj jedno wspólne podsumowanie sprzedaży, CRM, wydatków, nieukończonych projektów i ryzyk. Wskaż trzy najważniejsze działania. Następnie bezpiecznie uporządkuj trwałe lekcje: scal tylko oczywiste duplikaty, zachowaj źródła i nie usuwaj niepewnych danych. Nie powtarzaj dziennych rekomendacji i zapisz tylko jeden raport.",
   },
+  memory: {
+    name: "Porządkowanie pamięci",
+    prompt: "To automatyczne porządkowanie pamięci. Scal tylko oczywiste duplikaty, oznacz informacje nieaktualne, zachowaj źródła i nie usuwaj niepewnych danych bez potwierdzenia. Zapisz krótkie podsumowanie zmian.",
+  },
 };
 
 function parseFinal(ndjson) {

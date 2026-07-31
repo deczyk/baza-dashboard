@@ -57,9 +57,6 @@ module.exports = async function handler(req, res) {
     return;
   }
   const automationType = periodParam === 'rano' ? 'morning' : periodParam === 'wieczor' ? 'evening' : null;
-  if (automationType) {
-    await runCloudAutomation(req.headers.host || 'decz.pl', automationType).catch(() => {});
-  }
   const BIN_ID = process.env.JSONBIN_BIN_ID;
   const API_KEY = process.env.JSONBIN_API_KEY;
 
@@ -71,6 +68,9 @@ module.exports = async function handler(req, res) {
 
   try {
     const { record: data } = await store.getLatest();
+    if (automationType && data.debrainAutomationSettings?.[automationType] !== false) {
+      await runCloudAutomation(req.headers.host || 'decz.pl', automationType).catch(() => {});
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const doneToday = (data.habits && data.habits.date === today) ? data.habits.done : {};
