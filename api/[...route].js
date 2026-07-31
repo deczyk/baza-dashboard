@@ -137,6 +137,10 @@ module.exports = async (req, res) => {
   const route = (Array.isArray(raw) ? raw : String(raw || '').split('/')).filter(Boolean).map(decodeURIComponent);
   const method = req.method || 'GET';
   try {
+    if (route[0] === 'werboard-state') {
+      if (method === 'GET') { const { record } = await bazaStore.getLatest(); send(res, 200, { state: record.werboardState || {} }); return; }
+      if (method === 'POST') { const state = req.body?.state && typeof req.body.state === 'object' ? req.body.state : {}; await bazaStore.mutateRecord((data) => { data.werboardState = state; }); send(res, 200, { ok: true }); return; }
+    }
     if (route[0] === 'werboard-calendar') { await handleWerboardCalendar(req, res); return; }
     // Widok statusu używany przez interfejs na decz.pl.
     if (route[0] === 'debrain' && route[1] === 'status' && method === 'GET') {

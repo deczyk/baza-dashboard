@@ -7,6 +7,7 @@
   ],
   "rewrites": [
     { "source": "/api/werboard-calendar", "destination": "/api/[...route]?route=werboard-calendar" },
+    { "source": "/api/werboard-state", "destination": "/api/[...route]?route=werboard-state" },
     { "source": "/api/werboard-google-auth-start", "destination": "/api/google-auth-start?werboard=1" },
     { "source": "/api/debrain/status", "destination": "/api/[...route]?route=debrain/status" },
     { "source": "/api/habit-state", "destination": "/api/[...route]?route=habit-state" },
