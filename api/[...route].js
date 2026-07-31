@@ -106,11 +106,38 @@ function mergeGraph(graph, incoming) {
   return { nodes: graph.nodes.length, edges: graph.edges.length };
 }
 
+async function werboardToken(data) {
+  const refreshToken = data.werboardCalendar?.refreshToken;
+  if (!refreshToken) return null;
+  const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: refreshToken, grant_type: 'refresh_token' }) });
+  const token = await response.json();
+  if (!token.access_token) throw new Error('Połączenie z Google wygasło. Połącz kalendarz ponownie.');
+  return token.access_token;
+}
+async function werboardGoogle(token, path, options = {}) {
+  const response = await fetch(`https://www.googleapis.com/calendar/v3${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(options.headers || {}) } });
+  if (response.status === 204) return {};
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || 'Błąd Google Calendar.');
+  return data;
+}
+function werboardEvent(event) { return { id: event.id, title: event.summary || '(bez tytułu)', start: event.start?.dateTime || event.start?.date, allDay: !event.start?.dateTime }; }
+async function handleWerboardCalendar(req, res) {
+  const { record: data } = await bazaStore.getLatest(); const action = req.method === 'GET' ? String(req.query.action || 'overview') : String(req.body?.action || '');
+  if (req.method === 'POST' && action === 'disconnect') { await bazaStore.mutateRecord((state) => { delete state.werboardCalendar; }); send(res, 200, { ok: true }); return; }
+  const token = await werboardToken(data); if (!token) { send(res, 200, { connected: false, events: [], calendars: [] }); return; }
+  const selected = data.werboardCalendar?.calendarId || 'primary';
+  if (req.method === 'POST' && action === 'select-calendar') { const calendarId = String(req.body.calendarId || 'primary'); await bazaStore.mutateRecord((state) => { state.werboardCalendar = { ...(state.werboardCalendar || {}), calendarId }; }); send(res, 200, { ok: true }); return; }
+  if (req.method === 'POST' && ['create', 'update', 'delete'].includes(action)) { const calendarId = encodeURIComponent(selected); const id = encodeURIComponent(String(req.body.id || '')); if (action === 'delete') { await werboardGoogle(token, `/calendars/${calendarId}/events/${id}`, { method: 'DELETE' }); send(res, 200, { ok: true }); return; } const title = String(req.body.title || '').trim(); const date = String(req.body.date || ''); const allDay = Boolean(req.body.allDay); const time = String(req.body.time || ''); if (!title || !date) { send(res, 400, { error: 'Podaj nazwę i datę wydarzenia.' }); return; } const body = allDay ? { summary: title, start: { date }, end: { date: new Date(new Date(`${date}T12:00:00`).getTime() + 86400000).toISOString().slice(0, 10) } } : { summary: title, start: { dateTime: `${date}T${time || '09:00'}:00`, timeZone: 'Europe/Warsaw' }, end: { dateTime: new Date(new Date(`${date}T${time || '09:00'}:00`).getTime() + 3600000).toISOString(), timeZone: 'Europe/Warsaw' } }; const event = await werboardGoogle(token, action === 'create' ? `/calendars/${calendarId}/events` : `/calendars/${calendarId}/events/${id}`, { method: action === 'create' ? 'POST' : 'PATCH', body: JSON.stringify(body) }); send(res, 200, { ok: true, event: werboardEvent(event) }); return; }
+  const [calendarData, eventData] = await Promise.all([werboardGoogle(token, '/users/me/calendarList?minAccessRole=reader'), werboardGoogle(token, `/calendars/${encodeURIComponent(selected)}/events?timeMin=${encodeURIComponent(new Date().toISOString())}&timeMax=${encodeURIComponent(new Date(Date.now() + 7 * 86400000).toISOString())}&singleEvents=true&orderBy=startTime&maxResults=25`)]); send(res, 200, { connected: true, calendarId: selected, calendars: (calendarData.items || []).map((item) => ({ id: item.id, summary: item.summary || 'Bez nazwy' })), events: (eventData.items || []).map(werboardEvent) });
+}
+
 module.exports = async (req, res) => {
   const raw = req.query.route;
   const route = (Array.isArray(raw) ? raw : String(raw || '').split('/')).filter(Boolean).map(decodeURIComponent);
   const method = req.method || 'GET';
   try {
+    if (route[0] === 'werboard-calendar') { await handleWerboardCalendar(req, res); return; }
     // Widok statusu używany przez interfejs na decz.pl.
     if (route[0] === 'debrain' && route[1] === 'status' && method === 'GET') {
       send(res, 200, { online: true, cloud: true, checkedAt: now() }); return;
