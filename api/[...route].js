@@ -139,7 +139,17 @@ module.exports = async (req, res) => {
   try {
     if (route[0] === 'werboard-state') {
       if (method === 'GET') { const { record } = await bazaStore.getLatest(); send(res, 200, { state: record.werboardState || {} }); return; }
-      if (method === 'POST') { const state = req.body?.state && typeof req.body.state === 'object' ? req.body.state : {}; await bazaStore.mutateRecord((data) => { data.werboardState = state; }); send(res, 200, { ok: true }); return; }
+      if (method === 'POST') {
+        const state = req.body?.state && typeof req.body.state === 'object' ? req.body.state : {};
+        const result = await bazaStore.mutateRecord((data) => {
+          const current = data.werboardState || {};
+          if (current._updatedAt && state._updatedAt && new Date(state._updatedAt) < new Date(current._updatedAt)) return { saved: false };
+          data.werboardStateHistory = [{ savedAt: new Date().toISOString(), state: current }, ...(data.werboardStateHistory || [])].slice(0, 8);
+          data.werboardState = state;
+          return { saved: true };
+        });
+        send(res, 200, { ok: true, ...result }); return;
+      }
     }
     if (route[0] === 'werboard-calendar') { await handleWerboardCalendar(req, res); return; }
     // Widok statusu używany przez interfejs na decz.pl.
