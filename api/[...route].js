@@ -74,6 +74,45 @@ function automationItems(settings = {}) {
   return AUTOMATIONS.map((item) => ({ ...item, enabled: settings[item.id]?.enabled !== false, running: false, lastRun: settings[item.id]?.lastRun || null, lastResult: settings[item.id]?.lastResult || null, attention: Boolean(settings[item.id]?.attention) }));
 }
 
+const GRAPH_STOP_WORDS = new Set('oraz albo ktory która które tego tych jest są nie tak na do od w z za po przy dla przez jako ale że aby też tylko bardzo jeszcze już będzie były być mam masz ma twoj twoja moje moja nasze wasze this that with from your and the are have has'.split(' '));
+const GRAPH_SOURCE_LABELS = {
+  deczboard: 'Deczboard', 'debrain-chat': 'Rozmowy z Debrainem', 'deczboard-notes': 'Notatki',
+  'deczboard-todos': 'Do zrobienia', 'deczboard-projects': 'Projekty', 'deczboard-shopping': 'Zakupy',
+  'deczboard-habits': 'Nawyki', 'deczboard-journal': 'Dziennik', 'deczboard-finance': 'Finanse',
+  'debrain-os': 'Debrain OS', 'debrain-ai': 'Analizy Debraina',
+};
+function graphTokens(value) {
+  return [...new Set(String(value || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9]+/gi, ' ').split(/\s+/)
+    .filter((word) => word.length >= 4 && !GRAPH_STOP_WORDS.has(word)))];
+}
+function graphEdge(graph, nodeFrom, nodeTo, relation, confidence, status = 'confirmed') {
+  if (!nodeFrom || !nodeTo || nodeFrom === nodeTo) return;
+  const existing = graph.edges.find((edge) => ((edge.nodeFrom === nodeFrom && edge.nodeTo === nodeTo) || (edge.nodeFrom === nodeTo && edge.nodeTo === nodeFrom)) && edge.relation === relation);
+  if (existing) { existing.confidence = Math.max(Number(existing.confidence || 0), confidence); existing.status = existing.status === 'confirmed' || status === 'confirmed' ? 'confirmed' : status; existing.updatedAt = now(); return; }
+  graph.edges.push({ id: newId('edge'), nodeFrom, nodeTo, relation, confidence, status, createdAt: now(), updatedAt: now() });
+}
+function graphAutoConnect(graph, node) {
+  if (!node?.id) return;
+  const source = String(node.source || 'deczboard');
+  const categoryId = `concept:source:${source}`;
+  let category = graph.nodes.find((item) => item.id === categoryId);
+  if (!category) {
+    const timestamp = now();
+    category = { id: categoryId, type: 'concept', title: GRAPH_SOURCE_LABELS[source] || source, content: `Automatyczna kategoria źródła: ${source}.`, source: 'graph:structure', domain: node.domain || 'private', createdAt: timestamp, updatedAt: timestamp };
+    graph.nodes.push(category);
+  }
+  graphEdge(graph, node.id, categoryId, 'należy do wątku', 0.96);
+  const tokens = graphTokens(`${node.title} ${node.content}`);
+  if (!tokens.length) return;
+  const candidates = graph.nodes.filter((other) => other.id !== node.id && other.id !== categoryId && other.domain === node.domain).slice(-600);
+  const matches = candidates.map((other) => {
+    const otherTokens = new Set(graphTokens(`${other.title} ${other.content}`));
+    const shared = tokens.filter((token) => otherTokens.has(token)).slice(0, 3);
+    return { other, shared };
+  }).filter(({ shared }) => shared.length >= 2).sort((a, b) => b.shared.length - a.shared.length).slice(0, 5);
+  matches.forEach(({ other, shared }) => graphEdge(graph, node.id, other.id, `wspólny wątek: ${shared.join(', ')}`, Math.min(0.92, 0.55 + shared.length * 0.12), 'confirmed'));
+}
+
 function graphImport(graph, items) {
   let imported = 0;
   for (const source of items.slice(0, 500)) {
@@ -83,6 +122,7 @@ function graphImport(graph, items) {
     const old = graph.nodes.find((node) => node.id === item.id);
     if (old) Object.assign(old, item, { updatedAt: timestamp });
     else graph.nodes.push({ ...item, createdAt: timestamp, updatedAt: timestamp });
+    graphAutoConnect(graph, old || graph.nodes.find((node) => node.id === item.id));
     imported += 1;
   }
   return imported;
@@ -178,7 +218,8 @@ module.exports = async (req, res) => {
     if (route[0] === 'graph') {
       if (route.length === 1 && method === 'GET') { send(res, 200, await read((data) => data.graph)); return; }
       if (route[1] === 'import' && method === 'POST') { const result = await mutate((data) => { const totals = req.body?.graph ? mergeGraph(data.graph, req.body.graph) : { nodes: data.graph.nodes.length, edges: data.graph.edges.length }; return { ok: true, imported: graphImport(data.graph, Array.isArray(req.body?.items) ? req.body.items : []), totalNodes: totals.nodes || data.graph.nodes.length, totalEdges: totals.edges || data.graph.edges.length }; }); send(res, 200, result); return; }
-      if (route[1] === 'analyze' && method === 'POST') { send(res, 202, { ok: true, queued: false, reason: 'Analiza AI działa przez rozmowę Debraina; dane zostały już zapisane w Grafie Wiedzy.' }); return; }
+      if (route[1] === 'analyze' && method === 'POST') { const result = await mutate((data) => { const item = req.body || {}; const imported = graphImport(data.graph, [item]); const node = data.graph.nodes.find((entry) => entry.id === String(item.id || '')); return { ok: true, imported, node, totalEdges: data.graph.edges.length }; }); send(res, 200, result); return; }
+      if (route[1] === 'rebuild' && method === 'POST') { const result = await mutate((data) => { const before = data.graph.edges.length; [...data.graph.nodes].filter((node) => node.source !== 'graph:structure').slice(0, 700).forEach((node) => graphAutoConnect(data.graph, node)); return { ok: true, nodes: data.graph.nodes.length, edgesAdded: data.graph.edges.length - before, totalEdges: data.graph.edges.length }; }); send(res, 200, result); return; }
       if (route[1] === 'nodes' && route[2]) {
         const nodeId = route[2];
         if (method === 'PATCH') { const node = await mutate((data) => { const found = data.graph.nodes.find((item) => item.id === nodeId); if (!found) return null; if (typeof req.body?.title === 'string' && req.body.title.trim()) found.title = req.body.title.trim(); if (typeof req.body?.content === 'string') found.content = req.body.content; if (req.body?.domain === 'private' || req.body?.domain === 'company') found.domain = req.body.domain; found.updatedAt = now(); return found; }); if (!node) { send(res, 404, { error: 'Nie znaleziono węzła.' }); return; } send(res, 200, { ok: true, node }); return; }
