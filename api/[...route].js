@@ -10,6 +10,7 @@ const { runCloudAutomation } = require('./_debrain-automation-core');
 const COLLECTIONS = new Set(['todos', 'projects', 'shopping', 'movies', 'notes', 'links', 'journal', 'expenses', 'date-ideas', 'business-decisions']);
 
 const AUTOMATIONS = [
+  { id: 'coo-daily', cloudId: 'coo', name: 'Poranny COO', companion: 'day', schedule: 'Codziennie 08:00' },
   { id: 'morning-plan', cloudId: 'morning', name: 'Poranny fokus', companion: 'day', schedule: 'Codziennie 07:30' },
   { id: 'evening-tomorrow', cloudId: 'evening', name: 'Przygotowanie jutra', companion: 'day', schedule: 'Codziennie 21:30' },
   { id: 'weekly-business', cloudId: 'weekly', name: 'Tygodniowy przegląd', companion: 'finance', schedule: 'Poniedziałek 08:30' },

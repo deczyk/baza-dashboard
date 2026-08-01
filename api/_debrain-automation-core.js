@@ -1,6 +1,10 @@
 const store = require("./_supabase-store");
 
 const AUTOMATIONS = {
+  coo: {
+    name: "Poranny COO",
+    prompt: "Jesteś Debrain COO. Zrealizuj pełną pętlę operacyjną: 1) sprawdź kalendarz, zadania, CRM, priorytet i otwarte zobowiązania, 2) wybierz tylko rzeczy o realnym wpływie, 3) ułóż jeden plan: najważniejszy cel, maksymalnie trzy kroki, terminy i ryzyka, 4) zapisz wynik w Bazie. Działaj samodzielnie tylko w odczycie i bezpiecznym zapisie. Maili, publikacji, usuwania i kontaktu z klientem nie wykonuj — przygotuj je do zatwierdzenia. Limit: 3 kroki, jeden raport, bez powtarzania dawnych rekomendacji. Jeśli czegoś brakuje, napisz dokładnie jakiej jednej decyzji potrzebujesz.",
+  },
   morning: {
     name: "Poranny fokus",
     prompt: "To automatyczny poranny fokus. Sprawdź kalendarz, zadania, priorytety, CRM, klientów bez kontaktu i obiecane działania. Nie twórz kilku raportów. Wybierz jeden priorytet dnia, maksymalnie trzy kroki i sprawy z twardym terminem. Zapisz jeden zwięzły plan w Bazie.",
