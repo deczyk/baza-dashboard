@@ -201,7 +201,7 @@ module.exports = async (req, res) => {
         await bazaStore.mutateRecord((data) => { data.debrainAutomationSettings = { ...(data.debrainAutomationSettings || {}), [definition.cloudId]: enabled }; });
         send(res, 200, { ok: true, item }); return;
       }
-      if (definition && route[2] === 'run' && method === 'POST') {
+      if (definition && route[2] === 'run' && (method === 'POST' || (method === 'GET' && req.headers['x-vercel-cron']))) {
         let result;
         try { result = await runCloudAutomation(req.headers.host || 'decz.pl', definition.cloudId); }
         catch (error) { send(res, 502, { ok: false, error: error.message }); return; }
