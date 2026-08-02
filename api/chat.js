@@ -31,6 +31,7 @@ nigdy z ** wokół słów. Twoje odpowiedzi trafiają do zwykłego pola tekstowe
 
 NARZĘDZIA:
 - web_search — aktualne informacje z sieci
+- fetch_webpage — otwarcie konkretnej, publicznej strony i odczyt jej treści
 - read_baza_data — odczyt danych z dashboardu Baza (nawyki, zadania, priorytet, notatki, streak, XP, lista filmów do obejrzenia, kalorie dzisiaj)
 - update_baza_data — zapis do Bazy (dodanie zadania/notatki/produktu na zakupy/filmu do obejrzenia/kalorii, odznaczenie nawyku, ustawienie priorytetu dnia)
 - read_calendar — odczyt najbliższych wydarzeń z Google Calendar (podpięty w Bazie)
@@ -90,11 +91,23 @@ const TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "web_search",
-      description: "Szuka aktualnych informacji w internecie (DuckDuckGo).",
+      description: "Szuka aktualnych informacji w internecie. Po znalezieniu ważnej strony użyj fetch_webpage, aby sprawdzić jej treść.",
       parameters: {
         type: "object",
         properties: { query: { type: "string", description: "Zapytanie do wyszukania" } },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "fetch_webpage",
+      description: "Otwiera publiczny adres http/https i zwraca tekst strony. Używaj do weryfikacji ważnego źródła znalezionego przez web_search.",
+      parameters: {
+        type: "object",
+        properties: { url: { type: "string", description: "Pełny adres strony zaczynający się od https:// lub http://" } },
+        required: ["url"],
       },
     },
   },
@@ -286,6 +299,53 @@ async function searchDuckDuckGo(query) {
   return results;
 }
 
+async function searchBing(query) {
+  const resp = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(query)}&setlang=pl-PL`, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; Debrain/1.0)", "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.7" },
+  });
+  if (!resp.ok) throw new Error(`Bing status ${resp.status}`);
+  const html = await resp.text();
+  const results = [];
+  const blockRegex = /<li[^>]*class="b_algo"[^>]*>[\s\S]*?<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/g;
+  let match;
+  while ((match = blockRegex.exec(html)) !== null && results.length < 5) {
+    const stripTags = (value) => value.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").trim();
+    results.push({ url: match[1], title: stripTags(match[2]), snippet: stripTags(match[3]) });
+  }
+  return results;
+}
+
+function publicHttpUrl(rawUrl) {
+  const url = new URL(String(rawUrl || ""));
+  if (!/^https?:$/.test(url.protocol)) throw new Error("Dozwolone są wyłącznie publiczne adresy http/https.");
+  const host = url.hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".local") || /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) {
+    throw new Error("Nie otwieram adresów lokalnych z telefonu.");
+  }
+  return url.toString();
+}
+
+async function fetchWebpage(rawUrl) {
+  try {
+    const url = publicHttpUrl(rawUrl);
+    const response = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Debrain/1.0)", "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.7" },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return `Nie udało się otworzyć strony (HTTP ${response.status}).`;
+    const html = await response.text();
+    const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "").replace(/<[^>]+>/g, "").trim();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ").trim();
+    return JSON.stringify({ url, title, text: text.slice(0, 12000) });
+  } catch (error) {
+    return `Nie udało się otworzyć strony: ${error.message}`;
+  }
+}
+
 async function webSearch(query) {
   try {
     let results = [];
@@ -295,6 +355,9 @@ async function webSearch(query) {
       } catch (e) {
         results = []; // spadnij do DuckDuckGo
       }
+    }
+    if (results.length === 0) {
+      try { results = await searchBing(query); } catch (_) { results = []; }
     }
     if (results.length === 0) {
       results = await searchDuckDuckGo(query);
@@ -555,6 +618,7 @@ async function toolDeleteMemory(filename) {
 
 const TOOL_IMPL = {
   web_search: (args) => webSearch(args.query),
+  fetch_webpage: (args) => fetchWebpage(args.url),
   read_baza_data: () => readBazaData(),
   update_baza_data: (args) => updateBazaData(args),
   read_calendar: () => readCalendar(),
@@ -628,6 +692,7 @@ module.exports = async (req, res) => {
     const profileContext = profile ? `\n\nPROFIL UŻYTKOWNIKA (zatwierdzone dane):\n${JSON.stringify({basic:profile.basic,communication:profile.communication,workStyle:profile.workStyle,likes:profile.likes,dislikes:profile.dislikes,motivators:profile.motivators,approvedObservations:profile.approvedObservations}, null, 2)}\nUCZENIE: nie uznawaj pojedynczej wypowiedzi za stałą cechę. Przy wyraźnym lub powtarzalnym wzorcu użyj suggest_user_observation.` : "";
     let messages = [{ role: "system", content: SYSTEM_PROMPT + profileContext }, ...(history || [])];
     let finalContent = null;
+    const toolUses = new Map();
 
     for (let i = 0; i < 10 && finalContent === null; i++) {
       const data = await callDeepSeek(messages, model);
@@ -643,7 +708,11 @@ module.exports = async (req, res) => {
         const args = JSON.parse(tc.function.arguments || "{}");
         res.write(JSON.stringify({ type: "tool_start", name: tc.function.name, args }) + "\n");
         const impl = TOOL_IMPL[tc.function.name];
-        const result = impl ? await impl(args) : "Nieznane narzędzie";
+        const count = toolUses.get(tc.function.name) || 0;
+        toolUses.set(tc.function.name, count + 1);
+        const result = tc.function.name === "web_search" && count >= 2
+          ? "Limit dwóch prób wyszukiwania w tej odpowiedzi został osiągnięty. Nie powtarzaj szukania — podaj uczciwie, czego nie udało się potwierdzić."
+          : impl ? await impl(args) : "Nieznane narzędzie";
         messages.push({ role: "tool", tool_call_id: tc.id, content: String(result).slice(0, 6000) });
         res.write(JSON.stringify({ type: "tool_end", name: tc.function.name }) + "\n");
       }
