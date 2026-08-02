@@ -164,10 +164,17 @@ module.exports = async (req, res) => {
         res.status(200).json({ ok: true }); return;
       case "saveChatHistory": {
         const title = await mutate((data) => {
-          const chat = data.chats[p.chatId];
-          if (!chat) return null;
+          const now = new Date().toISOString();
+          const chat = data.chats[p.chatId] || {
+            title: "Nowa rozmowa",
+            folder_id: null,
+            history: [],
+            created: now,
+          };
+          data.chats[p.chatId] = chat;
           chat.history = p.history || [];
-          chat.updated = new Date().toISOString();
+          chat.updated = now;
+          data.activeChatId = p.chatId;
           if (!chat.title || chat.title === "Nowa rozmowa") {
             const firstUser = chat.history.find((m) => m.role === "user");
             if (firstUser) {
