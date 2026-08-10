@@ -33,7 +33,17 @@ module.exports = async function handler(req, res) {
     // Zapisz refresh_token w tym samym miejscu co reszta danych Bazy
     await store.mutateRecord((data) => {
       if (req.query.state === 'werboard') data.werboardCalendar = { ...(data.werboardCalendar || {}), refreshToken: tokens.refresh_token, calendarId: data.werboardCalendar?.calendarId || 'primary' };
-      else if (req.query.state === 'tataboard') data.tataboardCalendar = { ...(data.tataboardCalendar || {}), refreshToken: tokens.refresh_token, calendarId: data.tataboardCalendar?.calendarId || 'primary' };
+      else if (String(req.query.state || '').startsWith('tataboard')) {
+        const current = data.tataboardCalendar || {};
+        const existing = Array.isArray(current.accounts) ? current.accounts : (current.refreshToken ? [{ id: 'konto-1', refreshToken: current.refreshToken, calendarIds: current.calendarIds || [current.calendarId || 'primary'] }] : []);
+        const accountAlreadyConnected = existing.some((account) => account.refreshToken === tokens.refresh_token);
+        if (!accountAlreadyConnected) {
+          existing.push({ id: `konto-${Date.now()}`, refreshToken: tokens.refresh_token, calendarIds: ['primary'] });
+        }
+        const savedSelection = Array.isArray(current.selectedCalendars) ? current.selectedCalendars : [];
+        const defaultSelection = existing.flatMap((account) => account.calendarIds.map((calendarId) => `${account.id}:${calendarId}`));
+        data.tataboardCalendar = { accounts: existing, selectedCalendars: [...new Set([...savedSelection, ...defaultSelection])] };
+      }
       else data.googleRefreshToken = tokens.refresh_token;
     });
 

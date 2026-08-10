@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   });
 
   if (req.query.werboard === '1') params.set('state', 'werboard');
-  if (req.query.tataboard === '1') params.set('state', 'tataboard');
+  if (req.query.tataboard === '1') params.set('state', req.query.add === '1' ? 'tataboard-add' : 'tataboard');
   res.writeHead(302, { Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
   res.end();
 };
