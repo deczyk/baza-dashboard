@@ -178,6 +178,21 @@ async function handleWerboardCalendar(req, res) {
   const [calendarData, eventData] = await Promise.all([werboardGoogle(token, '/users/me/calendarList?minAccessRole=writer'), werboardGoogle(token, `/calendars/${encodeURIComponent(selected)}/events?timeMin=${encodeURIComponent(new Date().toISOString())}&timeMax=${encodeURIComponent(new Date(Date.now() + 7 * 86400000).toISOString())}&singleEvents=true&orderBy=startTime&maxResults=25`)]); send(res, 200, { connected: true, calendarId: selected, calendars: (calendarData.items || []).map((item) => ({ id: item.id, summary: item.summary || 'Bez nazwy' })), events: (eventData.items || []).map(werboardEvent) });
 }
 
+async function handleTataboardCalendar(req, res) {
+  const { record: data } = await bazaStore.getLatest(); const action = req.method === 'GET' ? String(req.query.action || 'overview') : String(req.body?.action || '');
+  if (req.method === 'POST' && action === 'disconnect') { await bazaStore.mutateRecord((state) => { delete state.tataboardCalendar; }); send(res, 200, { ok: true }); return; }
+  const refreshToken = data.tataboardCalendar?.refreshToken;
+  if (!refreshToken) { send(res, 200, { connected: false, events: [], calendars: [] }); return; }
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: refreshToken, grant_type: 'refresh_token' }) });
+  const token = await tokenResponse.json(); if (!token.access_token) throw new Error('Połączenie z Google wygasło. Połącz kalendarz ponownie.');
+  const google = (path, options = {}) => werboardGoogle(token.access_token, path, options);
+  let selected = data.tataboardCalendar?.calendarId || 'primary';
+  if (selected.includes('#holiday') || selected.includes('#contacts')) selected = 'primary';
+  if (req.method === 'POST' && action === 'select-calendar') { const calendarId = String(req.body.calendarId || 'primary'); await bazaStore.mutateRecord((state) => { state.tataboardCalendar = { ...(state.tataboardCalendar || {}), calendarId }; }); send(res, 200, { ok: true }); return; }
+  if (req.method === 'POST' && action === 'create') { const title = String(req.body.title || '').trim(); const date = String(req.body.date || ''); if (!title || !date) { send(res, 400, { error: 'Podaj nazwę i datę wydarzenia.' }); return; } const event = await google(`/calendars/${encodeURIComponent(selected)}/events`, { method: 'POST', body: JSON.stringify({ summary: title, start: { date }, end: { date: new Date(new Date(`${date}T12:00:00`).getTime() + 86400000).toISOString().slice(0, 10) } }) }); send(res, 200, { ok: true, event: werboardEvent(event) }); return; }
+  const [calendarData, eventData] = await Promise.all([google('/users/me/calendarList?minAccessRole=writer'), google(`/calendars/${encodeURIComponent(selected)}/events?timeMin=${encodeURIComponent(new Date().toISOString())}&timeMax=${encodeURIComponent(new Date(Date.now() + 30 * 86400000).toISOString())}&singleEvents=true&orderBy=startTime&maxResults=30`)]); send(res, 200, { connected: true, calendarId: selected, calendars: (calendarData.items || []).map((item) => ({ id: item.id, summary: item.summary || 'Bez nazwy' })), events: (eventData.items || []).map(werboardEvent) });
+}
+
 module.exports = async (req, res) => {
   const raw = req.query.route;
   const route = (Array.isArray(raw) ? raw : String(raw || '').split('/')).filter(Boolean).map(decodeURIComponent);
@@ -198,6 +213,11 @@ module.exports = async (req, res) => {
       }
     }
     if (route[0] === 'werboard-calendar') { await handleWerboardCalendar(req, res); return; }
+    if (route[0] === 'tataboard-calendar') { await handleTataboardCalendar(req, res); return; }
+    if (route[0] === 'tataboard-state') {
+      if (method === 'GET') { const { record } = await bazaStore.getLatest(); send(res, 200, { state: record.tataboardState || {} }); return; }
+      if (method === 'POST') { const state = req.body?.state && typeof req.body.state === 'object' ? req.body.state : {}; const result = await bazaStore.mutateRecord((data) => { const current = data.tataboardState || {}; if (current._updatedAt && state._updatedAt && new Date(state._updatedAt) < new Date(current._updatedAt)) return { saved: false }; data.tataboardState = state; return { saved: true }; }); send(res, 200, { ok: true, ...result }); return; }
+    }
     // Widok statusu używany przez interfejs na decz.pl.
     if (route[0] === 'debrain' && route[1] === 'status' && method === 'GET') {
       send(res, 200, { online: true, cloud: true, checkedAt: now() }); return;

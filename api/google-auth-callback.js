@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
     // Zapisz refresh_token w tym samym miejscu co reszta danych Bazy
     await store.mutateRecord((data) => {
       if (req.query.state === 'werboard') data.werboardCalendar = { ...(data.werboardCalendar || {}), refreshToken: tokens.refresh_token, calendarId: data.werboardCalendar?.calendarId || 'primary' };
+      else if (req.query.state === 'tataboard') data.tataboardCalendar = { ...(data.tataboardCalendar || {}), refreshToken: tokens.refresh_token, calendarId: data.tataboardCalendar?.calendarId || 'primary' };
       else data.googleRefreshToken = tokens.refresh_token;
     });
 
