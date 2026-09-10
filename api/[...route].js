@@ -199,6 +199,21 @@ async function handleTataboardCalendar(req, res) {
   send(res, 200, { connected: true, accounts: authenticated.map(({ id }) => ({ id })), calendars, selectedCalendars, events: eventLists.flat().sort((a, b) => String(a.start).localeCompare(String(b.start))) });
 }
 
+function defaultMonkeState() {
+  return {
+    _updatedAt: '',
+    onboarded: false,
+    habits: [],
+    goals: [],
+    doneLog: {},
+    focusSessions: [],
+    currency: { bananas: 0 },
+    xp: 0,
+    streak: { count: 0, lastCompleteDate: '' },
+    island: { stage: 0 },
+  };
+}
+
 module.exports = async (req, res) => {
   const raw = req.query.route;
   const route = (Array.isArray(raw) ? raw : String(raw || '').split('/')).filter(Boolean).map(decodeURIComponent);
@@ -232,6 +247,20 @@ module.exports = async (req, res) => {
     if (route[0] === 'habit-state') {
       if (method === 'GET') { send(res, 200, await read((data) => data.habitState || { date: new Date().toISOString().slice(0, 10), done: {} })); return; }
       if (method === 'POST') { const state = await mutate((data) => { data.habitState = { date: String(req.body?.date || new Date().toISOString().slice(0, 10)), done: req.body?.done && typeof req.body.done === 'object' ? req.body.done : {} }; return data.habitState; }); send(res, 200, state); return; }
+    }
+
+    if (route[0] === 'monke-state') {
+      if (method === 'GET') { send(res, 200, await read((data) => data.monkeState || defaultMonkeState())); return; }
+      if (method === 'POST') {
+        const incoming = req.body && typeof req.body === 'object' ? req.body : {};
+        const result = await mutate((data) => {
+          const current = data.monkeState || defaultMonkeState();
+          if (current._updatedAt && incoming._updatedAt && new Date(incoming._updatedAt) < new Date(current._updatedAt)) return { saved: false };
+          data.monkeState = { ...defaultMonkeState(), ...incoming };
+          return { saved: true };
+        });
+        send(res, 200, { ok: true, ...result }); return;
+      }
     }
 
     if (route[0] === 'board' && COLLECTIONS.has(route[1])) {
