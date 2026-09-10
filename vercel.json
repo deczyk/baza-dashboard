@@ -15,6 +15,7 @@
     { "source": "/api/tataboard-state", "destination": "/api/[...route]?route=tataboard-state" },
     { "source": "/api/debrain/status", "destination": "/api/[...route]?route=debrain/status" },
     { "source": "/api/habit-state", "destination": "/api/[...route]?route=habit-state" },
+    { "source": "/api/monke-state", "destination": "/api/[...route]?route=monke-state" },
     { "source": "/api/board/:collection", "destination": "/api/[...route]?route=board/:collection" },
     { "source": "/api/board/:collection/items", "destination": "/api/[...route]?route=board/:collection/items" },
     { "source": "/api/graph", "destination": "/api/[...route]?route=graph" },
