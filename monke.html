@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1f3d2b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Monke" />
+  <link rel="apple-touch-icon" href="/monke-icon.svg" />
+  <link rel="manifest" href="/monke.webmanifest" />
+  <title>Monke</title>
+  <style>
+    :root { --bg:#1f3d2b; --panel:#28503a; --accent:#f4c752; --text:#eef5ee; --muted:#9db8a6; --danger:#c9577f; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    header { padding:14px 16px; display:flex; align-items:center; justify-content:space-between; }
+    header .brand { font-weight:700; font-size:18px; }
+    header .sync-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); display:inline-block; margin-right:6px; }
+    body[data-sync="error"] header .sync-dot { background:var(--danger); }
+    main { padding:12px 16px 90px; }
+    nav.tabs { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--panel); border-top:1px solid rgba(255,255,255,.08); }
+    nav.tabs button { flex:1; background:none; border:none; color:var(--muted); padding:10px 4px; font-size:12px; }
+    nav.tabs button.active { color:var(--accent); }
+    .screen { display:none; }
+    .screen.active { display:block; }
+    .group-label { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:16px 0 6px; }
+    .habit-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .habit-row input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); }
+    .habit-row.done .h-name { text-decoration:line-through; color:var(--muted); }
+    .habit-row.minimum .h-name { text-decoration:line-through; color:var(--accent); }
+    .habit-row .min-btn { margin-left:auto; background:none; border:1px solid rgba(255,255,255,.2); color:var(--muted); border-radius:6px; padding:4px 8px; font-size:11px; }
+    .habit-row.minimum .min-btn { border-color:var(--accent); color:var(--accent); }
+    .progress-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; margin:10px 0; }
+    .progress-bar .fill { height:100%; background:var(--accent); }
+    .banana-count { font-weight:700; color:var(--accent); }
+    .card { background:var(--panel); border-radius:12px; padding:14px; margin-bottom:12px; }
+    button.primary { background:var(--accent); color:#1f3d2b; border:none; border-radius:8px; padding:10px 14px; font-weight:700; }
+    input[type=text] { width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05); color:var(--text); }
+    .island-stage { font-size:64px; text-align:center; margin:20px 0; }
+    .focus-timer { font-size:48px; text-align:center; margin:24px 0; font-variant-numeric:tabular-nums; }
+    .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .stat-grid .card { text-align:center; }
+    .stat-grid .value { font-size:28px; font-weight:700; }
+  </style>
+</head>
+<body data-sync="ok">
+  <header>
+    <span class="brand">🐒 Monke</span>
+    <span><span class="sync-dot"></span><span id="syncLabel">gotowe</span></span>
+  </header>
+
+  <main>
+    <section class="screen active" id="screen-today">
+      <div class="progress-bar"><div class="fill" id="todayFill" style="width:0%"></div></div>
+      <div id="habitGroups"></div>
+      <div class="card">
+        <input type="text" id="newHabitName" placeholder="Nazwa nawyku" />
+        <input type="text" id="newHabitGroup" placeholder="Grupa (np. Rano)" style="margin-top:8px" />
+        <button class="primary" id="addHabitBtn" style="margin-top:8px">Dodaj nawyk</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-island">
+      <div class="card">
+        <div class="island-stage" id="islandStage">🏝️</div>
+        <div style="text-align:center">🍌 <span class="banana-count" id="bananaCount">0</span></div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-focus">
+      <div class="card">
+        <div class="focus-timer" id="focusTimer">25:00</div>
+        <div style="display:flex; gap:8px; justify-content:center">
+          <button class="primary" id="focusStartBtn">Start</button>
+          <button id="focusStopBtn" disabled>Zakończ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-goals">
+      <div id="goalsList"></div>
+      <div class="card">
+        <input type="text" id="newGoalName" placeholder="Nazwa celu" />
+        <button class="primary" id="addGoalBtn" style="margin-top:8px">Dodaj cel</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-stats">
+      <div class="stat-grid">
+        <div class="card"><div class="value" id="statLevel">1</div>Poziom</div>
+        <div class="card"><div class="value" id="statRank">Brąz</div>Ranga</div>
+        <div class="card"><div class="value" id="statXp">0</div>XP</div>
+        <div class="card"><div class="value" id="statStreak">0</div>Streak</div>
+        <div class="card"><div class="value" id="statFocusAvg">0</div>Śr. focus (min)</div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button class="active" data-screen="today">Dziś</button>
+    <button data-screen="island">Wyspa</button>
+    <button data-screen="focus">Focus</button>
+    <button data-screen="goals">Cele</button>
+    <button data-screen="stats">Statystyki</button>
+  </nav>
+
+  <script type="module">
+    import { loadState, queueSave } from './monke-state.js';
+    import { levelFromXp, rankFromLevel, updateStreak } from './monke-ui.js';
+    import { groupedHabits, dayProgress, setHabitVariant, rewardForVariant } from './monke-habits.js';
+    import { goalProgress } from './monke-goals.js';
+    import { islandStageForBananas } from './monke-island.js';
+    import { bananasForFocusMinutes, createFocusSession } from './monke-focus.js';
+
+    let state = await loadState();
+
+    const todayStr = () => new Date().toISOString().slice(0, 10);
+    function newId(prefix) { return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`; }
+
+    function persist() { queueSave(state); render(); }
+
+    document.querySelectorAll('nav.tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav.tabs button').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`screen-${btn.dataset.screen}`).classList.add('active');
+      });
+    });
+
+    function renderHabits() {
+      const container = document.getElementById('habitGroups');
+      container.innerHTML = '';
+      const doneToday = state.doneLog[todayStr()] || {};
+      for (const [group, habits] of groupedHabits(state.habits)) {
+        const label = document.createElement('div');
+        label.className = 'group-label';
+        label.textContent = group;
+        container.appendChild(label);
+        for (const habit of habits) {
+          const variant = doneToday[habit.id] || null;
+          const row = document.createElement('div');
+          row.dataset.habitId = habit.id;
+          row.className = 'habit-row' + (variant === 'full' ? ' done' : '') + (variant === 'minimum' ? ' minimum' : '');
+          row.innerHTML = `<input type="checkbox" ${variant ? 'checked' : ''} /><span class="h-name">${habit.name}</span><button class="min-btn" type="button" title="Odhacz jako minimum na zły dzień">min</button>`;
+          row.querySelector('input').addEventListener('change', (e) => applyHabitVariant(habit, e.target.checked ? 'full' : null));
+          row.querySelector('.min-btn').addEventListener('click', () => applyHabitVariant(habit, variant === 'minimum' ? null : 'minimum'));
+          container.appendChild(row);
+        }
+      }
+      const progress = dayProgress(state.habits, doneToday);
+      document.getElementById('todayFill').style.width = progress.total ? `${(progress.done / progress.total) * 100}%` : '0%';
+    }
+
+    function applyHabitVariant(habit, newVariant) {
+      const today = todayStr();
+      const doneToday = state.doneLog[today] || {};
+      const previousVariant = doneToday[habit.id] || null;
+      if (previousVariant === newVariant) return;
+      state.doneLog = setHabitVariant(state.doneLog, today, habit.id, newVariant);
+      const prevReward = rewardForVariant(previousVariant);
+      const nextReward = rewardForVariant(newVariant);
+      state.xp = Math.max(0, state.xp - prevReward.xp + nextReward.xp);
+      state.currency.bananas = Math.max(0, state.currency.bananas - prevReward.bananas + nextReward.bananas);
+      const nowDoneToday = state.doneLog[today] || {};
+      const allDone = dayProgress(state.habits, nowDoneToday).done === state.habits.length && state.habits.length > 0;
+      state.streak = updateStreak(state.streak, today, allDone);
+      state.island.stage = islandStageForBananas(state.currency.bananas);
+      persist();
+    }
+
+    document.getElementById('addHabitBtn').addEventListener('click', () => {
+      const name = document.getElementById('newHabitName').value.trim();
+      const group = document.getElementById('newHabitGroup').value.trim() || 'Rano';
+      if (!name) return;
+      state.habits.push({ id: newId('h'), name, group, time: '', minimumVariant: '', goalId: null, createdAt: new Date().toISOString() });
+      document.getElementById('newHabitName').value = '';
+      document.getElementById('newHabitGroup').value = '';
+      persist();
+    });
+
+    function renderIsland() {
+      document.getElementById('bananaCount').textContent = state.currency.bananas;
+      const emojiByStage = ['🏝️', '🌱', '💧', '🌴', '🏠'];
+      document.getElementById('islandStage').textContent = emojiByStage[state.island.stage] || '🏝️';
+    }
+
+    function renderGoals() {
+      const container = document.getElementById('goalsList');
+      container.innerHTML = '';
+      const doneToday = state.doneLog[todayStr()] || {};
+      for (const goal of state.goals) {
+        const progress = goalProgress(goal, doneToday);
+        const card = document.createElement('div');
+        card.className = 'card';
+        const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+        card.innerHTML = `<strong>${goal.name}</strong><div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div><small>${progress.done}/${progress.total}</small>`;
+        container.appendChild(card);
+      }
+    }
+
+    document.getElementById('addGoalBtn').addEventListener('click', () => {
+      const name = document.getElementById('newGoalName').value.trim();
+      if (!name) return;
+      state.goals.push({ id: newId('g'), name, habitIds: [], createdAt: new Date().toISOString() });
+      document.getElementById('newGoalName').value = '';
+      persist();
+    });
+
+    let focusInterval = null;
+    let focusSecondsLeft = 25 * 60;
+    let focusStartedAt = null;
+    function renderFocusTimer() {
+      const m = String(Math.floor(focusSecondsLeft / 60)).padStart(2, '0');
+      const s = String(focusSecondsLeft % 60).padStart(2, '0');
+      document.getElementById('focusTimer').textContent = `${m}:${s}`;
+    }
+    document.getElementById('focusStartBtn').addEventListener('click', () => {
+      if (focusInterval) return;
+      focusStartedAt = new Date().toISOString();
+      document.getElementById('focusStartBtn').disabled = true;
+      document.getElementById('focusStopBtn').disabled = false;
+      focusInterval = setInterval(() => {
+        focusSecondsLeft -= 1;
+        renderFocusTimer();
+        if (focusSecondsLeft <= 0) finishFocus();
+      }, 1000);
+    });
+    document.getElementById('focusStopBtn').addEventListener('click', finishFocus);
+    function finishFocus() {
+      clearInterval(focusInterval);
+      focusInterval = null;
+      const elapsedMinutes = 25 - focusSecondsLeft / 60;
+      if (elapsedMinutes >= 1) {
+        const session = createFocusSession(focusStartedAt, elapsedMinutes);
+        state.focusSessions.push(session);
+        state.xp += session.xpEarned;
+        state.currency.bananas += bananasForFocusMinutes(session.minutes);
+        state.island.stage = islandStageForBananas(state.currency.bananas);
+      }
+      focusSecondsLeft = 25 * 60;
+      document.getElementById('focusStartBtn').disabled = false;
+      document.getElementById('focusStopBtn').disabled = true;
+      renderFocusTimer();
+      persist();
+    }
+
+    function renderStats() {
+      const { level } = levelFromXp(state.xp);
+      document.getElementById('statLevel').textContent = level;
+      const rank = rankFromLevel(level);
+      const rankEl = document.getElementById('statRank');
+      rankEl.textContent = rank.name;
+      rankEl.style.color = rank.color;
+      document.getElementById('statXp').textContent = state.xp;
+      document.getElementById('statStreak').textContent = state.streak.count;
+      const sessions = state.focusSessions;
+      const avg = sessions.length ? Math.round(sessions.reduce((sum, s) => sum + s.minutes, 0) / sessions.length) : 0;
+      document.getElementById('statFocusAvg').textContent = avg;
+    }
+
+    function render() {
+      renderHabits();
+      renderIsland();
+      renderGoals();
+      renderStats();
+      renderFocusTimer();
+    }
+
+    new MutationObserver(() => {
+      document.getElementById('syncLabel').textContent =
+        document.body.dataset.sync === 'saving' ? 'zapisywanie…' : document.body.dataset.sync === 'error' ? 'błąd zapisu' : 'gotowe';
+    }).observe(document.body, { attributes: true, attributeFilter: ['data-sync'] });
+
+    render();
+  </script>
+</body>
+</html>
