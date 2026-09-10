@@ -65,6 +65,8 @@
     <span><span class="sync-dot"></span><span id="syncLabel">gotowe</span></span>
   </header>
 
+  <div id="onboardingOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:10; padding:24px; display:none;"></div>
+
   <main>
     <section class="screen active" id="screen-today">
       <div class="progress-bar"><div class="fill" id="todayFill" style="width:0%"></div></div>
@@ -127,6 +129,7 @@
     import { goalProgress } from './monke-goals.js';
     import { islandStageForBananas } from './monke-island.js';
     import { bananasForFocusMinutes, createFocusSession } from './monke-focus.js';
+    import { renderOnboarding } from './monke-onboarding.js';
 
     let state = await loadState();
 
@@ -303,6 +306,14 @@
         document.body.dataset.sync === 'saving' ? 'zapisywanie…' : document.body.dataset.sync === 'error' ? 'błąd zapisu' : 'gotowe';
     }).observe(document.body, { attributes: true, attributeFilter: ['data-sync'] });
 
+    if (!state.onboarded) {
+      document.getElementById('onboardingOverlay').style.display = 'block';
+      renderOnboarding(document.getElementById('onboardingOverlay'), () => {
+        state.onboarded = true;
+        document.getElementById('onboardingOverlay').style.display = 'none';
+        persist();
+      });
+    }
     render();
   </script>
 </body>
