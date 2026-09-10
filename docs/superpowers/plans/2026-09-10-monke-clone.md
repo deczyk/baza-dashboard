@@ -798,6 +798,9 @@ Create `monke.html`:
     .habit-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
     .habit-row input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); }
     .habit-row.done .h-name { text-decoration:line-through; color:var(--muted); }
+    .habit-row.minimum .h-name { text-decoration:line-through; color:var(--accent); }
+    .habit-row .min-btn { margin-left:auto; background:none; border:1px solid rgba(255,255,255,.2); color:var(--muted); border-radius:6px; padding:4px 8px; font-size:11px; }
+    .habit-row.minimum .min-btn { border-color:var(--accent); color:var(--accent); }
     .progress-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; margin:10px 0; }
     .progress-bar .fill { height:100%; background:var(--accent); }
     .banana-count { font-weight:700; color:var(--accent); }
@@ -856,6 +859,7 @@ Create `monke.html`:
     <section class="screen" id="screen-stats">
       <div class="stat-grid">
         <div class="card"><div class="value" id="statLevel">1</div>Poziom</div>
+        <div class="card"><div class="value" id="statRank">Brąz</div>Ranga</div>
         <div class="card"><div class="value" id="statXp">0</div>XP</div>
         <div class="card"><div class="value" id="statStreak">0</div>Streak</div>
         <div class="card"><div class="value" id="statFocusAvg">0</div>Śr. focus (min)</div>
@@ -874,10 +878,10 @@ Create `monke.html`:
   <script type="module">
     import { loadState, queueSave } from './monke-state.js';
     import { levelFromXp, rankFromLevel, updateStreak } from './monke-ui.js';
-    import { groupedHabits, dayProgress, isHabitDone, setHabitVariant, rewardForVariant } from './monke-habits.js';
+    import { groupedHabits, dayProgress, setHabitVariant, rewardForVariant } from './monke-habits.js';
     import { goalProgress } from './monke-goals.js';
     import { islandStageForBananas } from './monke-island.js';
-    import { xpForFocusMinutes, bananasForFocusMinutes, createFocusSession } from './monke-focus.js';
+    import { bananasForFocusMinutes, createFocusSession } from './monke-focus.js';
 
     let state = await loadState();
 
@@ -905,10 +909,13 @@ Create `monke.html`:
         label.textContent = group;
         container.appendChild(label);
         for (const habit of habits) {
+          const variant = doneToday[habit.id] || null;
           const row = document.createElement('div');
-          row.className = 'habit-row' + (isHabitDone(doneToday, habit.id) ? ' done' : '');
-          row.innerHTML = `<input type="checkbox" ${isHabitDone(doneToday, habit.id) ? 'checked' : ''} /><span class="h-name">${habit.name}</span>`;
-          row.querySelector('input').addEventListener('change', (e) => toggleHabit(habit, e.target.checked));
+          row.dataset.habitId = habit.id;
+          row.className = 'habit-row' + (variant === 'full' ? ' done' : '') + (variant === 'minimum' ? ' minimum' : '');
+          row.innerHTML = `<input type="checkbox" ${variant ? 'checked' : ''} /><span class="h-name">${habit.name}</span><button class="min-btn" type="button" title="Odhacz jako minimum na zły dzień">min</button>`;
+          row.querySelector('input').addEventListener('change', (e) => applyHabitVariant(habit, e.target.checked ? 'full' : null));
+          row.querySelector('.min-btn').addEventListener('click', () => applyHabitVariant(habit, variant === 'minimum' ? null : 'minimum'));
           container.appendChild(row);
         }
       }
@@ -916,21 +923,16 @@ Create `monke.html`:
       document.getElementById('todayFill').style.width = progress.total ? `${(progress.done / progress.total) * 100}%` : '0%';
     }
 
-    function toggleHabit(habit, checked) {
+    function applyHabitVariant(habit, newVariant) {
       const today = todayStr();
       const doneToday = state.doneLog[today] || {};
-      const wasDone = isHabitDone(doneToday, habit.id);
-      const variant = checked ? 'full' : null;
-      state.doneLog = setHabitVariant(state.doneLog, today, habit.id, variant);
-      const reward = checked ? rewardForVariant('full') : rewardForVariant(isHabitDone(doneToday, habit.id) ? 'full' : null);
-      if (checked && !wasDone) {
-        state.xp += reward.xp;
-        state.currency.bananas += reward.bananas;
-      } else if (!checked && wasDone) {
-        const undone = rewardForVariant(doneToday[habit.id]);
-        state.xp = Math.max(0, state.xp - undone.xp);
-        state.currency.bananas = Math.max(0, state.currency.bananas - undone.bananas);
-      }
+      const previousVariant = doneToday[habit.id] || null;
+      if (previousVariant === newVariant) return;
+      state.doneLog = setHabitVariant(state.doneLog, today, habit.id, newVariant);
+      const prevReward = rewardForVariant(previousVariant);
+      const nextReward = rewardForVariant(newVariant);
+      state.xp = Math.max(0, state.xp - prevReward.xp + nextReward.xp);
+      state.currency.bananas = Math.max(0, state.currency.bananas - prevReward.bananas + nextReward.bananas);
       const nowDoneToday = state.doneLog[today] || {};
       const allDone = dayProgress(state.habits, nowDoneToday).done === state.habits.length && state.habits.length > 0;
       state.streak = updateStreak(state.streak, today, allDone);
@@ -1017,6 +1019,10 @@ Create `monke.html`:
     function renderStats() {
       const { level } = levelFromXp(state.xp);
       document.getElementById('statLevel').textContent = level;
+      const rank = rankFromLevel(level);
+      const rankEl = document.getElementById('statRank');
+      rankEl.textContent = rank.name;
+      rankEl.style.color = rank.color;
       document.getElementById('statXp').textContent = state.xp;
       document.getElementById('statStreak').textContent = state.streak.count;
       const sessions = state.focusSessions;
@@ -1048,11 +1054,12 @@ Create `monke.html`:
 Deploy to a preview or run locally with the Vercel CLI (`vercel dev`), open `/monke.html` in a browser:
 1. On the "Dziś" tab, add a habit named "Woda" in group "Rano". Confirm it appears under a "Rano" group label.
 2. Check its checkbox. Confirm the row gets struck-through, the progress bar fills, and (open devtools → Network) a `POST /api/monke-state` fires within ~600ms.
-3. Reload the page. Confirm the habit and its checked state persisted (loaded from the API).
-4. Switch to "Wyspa" tab — confirm the banana count shows `1` and the island emoji is `🏝️` (stage 0, since 1 banana < 10 required for stage 1).
-5. Switch to "Focus" tab, click Start, confirm the countdown ticks down from `25:00`. Click "Zakończ" early — confirm no XP is awarded if elapsed time is under 1 minute (check Statystyki tab XP unchanged).
-6. Switch to "Cele" tab, add a goal "Test". Confirm it appears with `0/0` (no linked habits yet — linking habits to goals via UI is out of scope for Task 8, tracked as a known gap in Task 8's own verification, not a blocker for later tasks).
-7. Switch to "Statystyki" tab, confirm Level/XP/Streak/Śr. focus reflect the state.
+3. Add a second habit "Trening", then click its "min" button instead of the checkbox. Confirm the row is struck-through in the accent color (not the muted "done" color) and the "min" button itself is highlighted — this is the `minimum` variant. Click "min" again and confirm it un-marks.
+4. Reload the page. Confirm both habits and their checked/minimum state persisted (loaded from the API).
+5. Switch to "Wyspa" tab — confirm the banana count shows `1` (only the `full` habit earns a banana; `minimum` doesn't) and the island emoji is `🏝️` (stage 0, since 1 banana < 10 required for stage 1).
+6. Switch to "Focus" tab, click Start, confirm the countdown ticks down from `25:00`. Click "Zakończ" early — confirm no XP is awarded if elapsed time is under 1 minute (check Statystyki tab XP unchanged).
+7. Switch to "Cele" tab, add a goal "Test". Confirm it appears with `0/0` (no linked habits yet — linking habits to goals via UI is out of scope for Task 8, tracked as a known gap in Task 8's own verification, not a blocker for later tasks).
+8. Switch to "Statystyki" tab, confirm Level/Ranga/XP/Streak/Śr. focus reflect the state (Ranga should read "Brąz" at level 1).
 
 - [ ] **Step 3: Commit**
 
@@ -1098,12 +1105,13 @@ Add inside the existing `<style>` tag (after the `.stat-grid .value` rule):
 
 In `monke.html`'s `<script type="module">` block:
 
-Replace the `toggleHabit` function's checked-branch row lookup with an animation trigger. Immediately after `state.island.stage = islandStageForBananas(state.currency.bananas);` inside `toggleHabit`, add (before the closing `persist();`):
+Add an animation trigger to `applyHabitVariant`. Immediately after `state.island.stage = islandStageForBananas(state.currency.bananas);` inside `applyHabitVariant`, add (before the closing `persist();`):
 
 ```js
-      if (checked && !wasDone) {
-        const row = [...document.querySelectorAll('.habit-row')].find((r) => r.querySelector('.h-name').textContent === habit.name);
-        if (row) { pulse(row, 'just-checked'); row.classList.add('banana-fly'); setTimeout(() => row.classList.remove('banana-fly'), 650); }
+      const row = document.querySelector(`.habit-row[data-habit-id="${habit.id}"]`);
+      if (row && previousVariant === null && newVariant !== null) {
+        pulse(row, 'just-checked');
+        if (nextReward.bananas > prevReward.bananas) { row.classList.add('banana-fly'); setTimeout(() => row.classList.remove('banana-fly'), 650); }
       }
 ```
 
@@ -1119,6 +1127,10 @@ In `renderStats()`, capture the previous level and flash on level-up. Replace th
       levelEl.textContent = level;
       if (lastRenderedLevel !== null && level > lastRenderedLevel) pulse(levelEl, 'level-up', 700);
       lastRenderedLevel = level;
+      const rank = rankFromLevel(level);
+      const rankEl = document.getElementById('statRank');
+      rankEl.textContent = rank.name;
+      rankEl.style.color = rank.color;
       document.getElementById('statXp').textContent = state.xp;
       const streakEl = document.getElementById('statStreak');
       streakEl.textContent = state.streak.count;
