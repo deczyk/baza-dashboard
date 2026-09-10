@@ -41,6 +41,22 @@
     .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .stat-grid .card { text-align:center; }
     .stat-grid .value { font-size:28px; font-weight:700; }
+
+    @keyframes checkPop { 0%{transform:scale(1);} 50%{transform:scale(1.15);} 100%{transform:scale(1);} }
+    .habit-row.just-checked { animation: checkPop .3s ease; }
+
+    @keyframes bananaFly { 0%{transform:translateY(0) scale(1); opacity:1;} 100%{transform:translateY(-24px) scale(1.4); opacity:0;} }
+    .banana-fly { position:relative; }
+    .banana-fly::after { content:'🍌'; position:absolute; right:0; top:0; animation:bananaFly .6s ease forwards; }
+
+    @keyframes levelFlash { 0%{transform:scale(1);} 50%{transform:scale(1.3); text-shadow:0 0 12px var(--accent);} 100%{transform:scale(1);} }
+    .level-up { animation: levelFlash .6s ease; }
+
+    @keyframes streakPulse { 0%{opacity:1;} 50%{opacity:.4;} 100%{opacity:1;} }
+    .streak-growing { animation: streakPulse 1s ease infinite; }
+
+    @keyframes stageUnlock { 0%{transform:scale(0.4); opacity:0;} 100%{transform:scale(1); opacity:1;} }
+    .island-stage.stage-unlocked { animation: stageUnlock .5s ease; }
   </style>
 </head>
 <body data-sync="ok">
@@ -106,7 +122,7 @@
 
   <script type="module">
     import { loadState, queueSave } from './monke-state.js';
-    import { levelFromXp, rankFromLevel, updateStreak } from './monke-ui.js';
+    import { levelFromXp, rankFromLevel, updateStreak, pulse } from './monke-ui.js';
     import { groupedHabits, dayProgress, setHabitVariant, rewardForVariant } from './monke-habits.js';
     import { goalProgress } from './monke-goals.js';
     import { islandStageForBananas } from './monke-island.js';
@@ -167,6 +183,11 @@
       state.streak = updateStreak(state.streak, today, allDone);
       state.island.stage = islandStageForBananas(state.currency.bananas);
       persist();
+      const row = document.querySelector(`.habit-row[data-habit-id="${habit.id}"]`);
+      if (row && previousVariant === null && newVariant !== null) {
+        pulse(row, 'just-checked');
+        if (nextReward.bananas > prevReward.bananas) { row.classList.add('banana-fly'); setTimeout(() => row.classList.remove('banana-fly'), 650); }
+      }
     }
 
     document.getElementById('addHabitBtn').addEventListener('click', () => {
@@ -179,10 +200,14 @@
       persist();
     });
 
+    let lastRenderedStage = null;
     function renderIsland() {
       document.getElementById('bananaCount').textContent = state.currency.bananas;
       const emojiByStage = ['🏝️', '🌱', '💧', '🌴', '🏠'];
-      document.getElementById('islandStage').textContent = emojiByStage[state.island.stage] || '🏝️';
+      const stageEl = document.getElementById('islandStage');
+      stageEl.textContent = emojiByStage[state.island.stage] || '🏝️';
+      if (lastRenderedStage !== null && state.island.stage > lastRenderedStage) pulse(stageEl, 'stage-unlocked', 500);
+      lastRenderedStage = state.island.stage;
     }
 
     function renderGoals() {
@@ -245,15 +270,21 @@
       persist();
     }
 
+    let lastRenderedLevel = null;
     function renderStats() {
       const { level } = levelFromXp(state.xp);
-      document.getElementById('statLevel').textContent = level;
+      const levelEl = document.getElementById('statLevel');
+      levelEl.textContent = level;
+      if (lastRenderedLevel !== null && level > lastRenderedLevel) pulse(levelEl, 'level-up', 700);
+      lastRenderedLevel = level;
       const rank = rankFromLevel(level);
       const rankEl = document.getElementById('statRank');
       rankEl.textContent = rank.name;
       rankEl.style.color = rank.color;
       document.getElementById('statXp').textContent = state.xp;
-      document.getElementById('statStreak').textContent = state.streak.count;
+      const streakEl = document.getElementById('statStreak');
+      streakEl.textContent = state.streak.count;
+      streakEl.classList.toggle('streak-growing', state.streak.count >= 3);
       const sessions = state.focusSessions;
       const avg = sessions.length ? Math.round(sessions.reduce((sum, s) => sum + s.minutes, 0) / sessions.length) : 0;
       document.getElementById('statFocusAvg').textContent = avg;
