@@ -32,7 +32,7 @@ wizualnym** — nie kopiujemy assetów.
 - `api/[...route].js` — jeden catch-all endpoint API dla wszystkich
   modułów (`habit-state`, `werboard-state`, `tataboard-state`, `board/*`,
   `graph/*`, `automations/*`), zapisujący do wspólnego blobu w Supabase
-  (tabela `debrain_store`, funkcja RPC `save_debrain_store` z
+  (tabela `panel_store`, funkcja RPC `save_debrain_store` z
   optimistic-locking po wersji).
 - `api/_supabase-store.js` — wspólny moduł dostępu do Supabase
   (`getLatest`, `mutateRecord`, `putRecord`), używany też przez
