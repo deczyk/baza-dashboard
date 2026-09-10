@@ -12,7 +12,7 @@ module.exports = async (_req, res) => {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/debrain_store?id=eq.main&select=id,version,updated_at`,
+      `${SUPABASE_URL}/rest/v1/panel_store?id=eq.main&select=id,version,updated_at`,
       {
         headers: {
           apikey: SUPABASE_SECRET_KEY,

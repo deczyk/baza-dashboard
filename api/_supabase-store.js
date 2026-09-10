@@ -1,7 +1,7 @@
 // api/_supabase-store.js — wspólny magazyn Bazy na Supabase (darmowe na zawsze, bez limitu zapytań
 // jak w jsonbin.io). Używany przez baza-data.js, calendar-*.js, google-auth-callback.js,
 // send-reminders.js, weekly-summary.js — wszystkie dzielą jeden wiersz (id="baza-data") w tej
-// samej tabeli `debrain_store`, którą już masz przygotowaną (supabase/01_DEBRAIN_ONLINE.sql).
+// samej tabeli `panel_store`, którą już masz przygotowaną (supabase/01_DEBRAIN_ONLINE.sql).
 //
 // To NIE jest osobna funkcja API (Vercel nie routuje plików zaczynających się od "_") —
 // to zwykły moduł importowany przez inne pliki w tym folderze.
@@ -20,13 +20,13 @@ function configured() {
 
 async function loadRecord() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/debrain_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
+    `${SUPABASE_URL}/rest/v1/panel_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
     { headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}` } }
   );
   if (!response.ok) throw new Error(`Supabase GET ${response.status}: ${await response.text()}`);
   const rows = await response.json();
   if (!rows.length) {
-    const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/debrain_store`, {
+    const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/panel_store`, {
       method: "POST",
       headers: {
         apikey: SECRET, Authorization: `Bearer ${SECRET}`,

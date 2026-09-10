@@ -14,12 +14,12 @@ function id() {
 
 async function loadStore() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/debrain_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
+    `${SUPABASE_URL}/rest/v1/panel_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`,
     { headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}` } }
   );
   if (!response.ok) throw new Error(`Supabase GET ${response.status}: ${await response.text()}`);
   const rows = await response.json();
-  if (!rows.length) throw new Error("Brak rekordu debrain_store/main.");
+  if (!rows.length) throw new Error("Brak rekordu panel_store/main.");
   return { data: rows[0].data || {}, version: Number(rows[0].version || 1) };
 }
 

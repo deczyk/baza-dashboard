@@ -34,14 +34,14 @@ function defaults(data) {
 
 async function load() {
   if (!SUPABASE_URL || !SECRET) throw new Error('Brak konfiguracji Supabase.');
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/debrain_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/panel_store?id=eq.${encodeURIComponent(STORE_ID)}&select=data,version`, {
     headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}` },
   });
   if (!response.ok) throw new Error(`Supabase GET ${response.status}: ${await response.text()}`);
   const rows = await response.json();
   if (rows.length) return { data: defaults(rows[0].data), version: Number(rows[0].version || 1) };
   const initial = defaults({});
-  const insert = await fetch(`${SUPABASE_URL}/rest/v1/debrain_store`, {
+  const insert = await fetch(`${SUPABASE_URL}/rest/v1/panel_store`, {
     method: 'POST',
     headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}`, 'Content-Type': 'application/json', Prefer: 'return=representation,resolution=ignore-duplicates' },
     body: JSON.stringify({ id: STORE_ID, data: initial, version: 1 }),
