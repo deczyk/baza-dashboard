@@ -1,0 +1,12 @@
+{
+  "name": "Monke",
+  "short_name": "Monke",
+  "description": "Nawyki, focus i wyspa w jednym miejscu.",
+  "start_url": "/monke.html",
+  "display": "standalone",
+  "background_color": "#1f3d2b",
+  "theme_color": "#1f3d2b",
+  "icons": [
+    { "src": "/monke-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
